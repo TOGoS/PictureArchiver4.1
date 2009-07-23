@@ -7,6 +7,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -361,8 +362,6 @@ public class PAMainWindow extends JFrame {
 		ip.setWheelScrollingEnabled(false);
 		ip.addMouseWheelListener(mwl);
 		addMouseWheelListener(mwl);
-		
-		pack();
 	}
 	
 	protected boolean isTrue( Map metadata, String name ) {
@@ -606,11 +605,20 @@ public class PAMainWindow extends JFrame {
 	
 	public static void main(String[] args) {
 		HashSet uriSet = new HashSet();
+		boolean maximize = false;
+		boolean undecorate = false;
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
-			if( !arg.startsWith("-") ) {
+			if( "-noborder".equals(arg) ) {
+				undecorate = true;
+			} else if( "-maximize".equals(arg) ) {
+				maximize = true;
+			} else if( !arg.startsWith("-") ) {
 				String uri = PathUtil.maybeNormalizeFileUri(arg);
 				collectImageUris( uri, uriSet );
+			} else {
+				System.err.println("Unrecognised argument: " + arg);
+				System.exit(1);
 			}
 		}
 		
@@ -625,6 +633,9 @@ public class PAMainWindow extends JFrame {
 		}
 		
 		final PAMainWindow pam = new PAMainWindow();
+		if( undecorate ) pam.setUndecorated(true);
+		pam.pack();
+		if( maximize ) pam.setExtendedState(pam.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 		pam.setVisible(true);
 		pam.addWindowListener(new WindowAdapter() {
 			public void windowClosing( WindowEvent e ) {
