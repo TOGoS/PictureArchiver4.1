@@ -19,14 +19,18 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
@@ -36,6 +40,8 @@ import javax.swing.JScrollPane;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
+
+import contentcouch.path.PathUtil;
 
 public class PAMainWindow extends JFrame {
 	public static final String NS = "http://ns.nuke24.net/PictureArchiver4.1/";
@@ -554,8 +560,63 @@ public class PAMainWindow extends JFrame {
 	public void goToNext() {
 		goToModIndex( state.listIndex + 1 );
 	}
+
+	protected static File getFile(String uri) {
+		if( uri.startsWith("file:" ) ) {
+			return new File(PathUtil.parseFilePathOrUri(uri).toString());
+		}
+		return null;
+	}
+
+	protected static boolean looksLikeImagePath( String path ) {
+		path = path.toLowerCase();
+		// TODO: add more image format extensions....
+		return path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg") || path.endsWith(".tiff") || path.endsWith(".tif");
+	}
+	
+	protected static String getFakePath( String path ) {
+		int delidx = path.indexOf("/.deleted/");
+		if( delidx != -1 ) {
+			path = path.substring(0,delidx) + path.substring(delidx+9);
+		}
+		return path;
+	}
+	
+	protected static void collectImageUris( File base, Set imageUriSet ) {
+		if( base.isDirectory() ) {
+			File[] subs = base.listFiles();
+			for( int i=0; i<subs.length; ++i ) {
+				File sub = subs[i];
+				if( !sub.getName().startsWith(".") || sub.getName().equals(".deleted") ) {
+					collectImageUris(sub, imageUriSet);
+				}
+			}
+		} else if( looksLikeImagePath(base.getPath()) ) {
+			imageUriSet.add(PathUtil.maybeNormalizeFileUri(getFakePath(base.getAbsolutePath())));
+		}
+	}
+	
+	protected static void collectImageUris( String base, Set uriList ) {
+		File file = getFile(base);
+		if( file == null ) {
+			throw new RuntimeException("I only handle file URIs, for now...");
+		}
+		collectImageUris( file, uriList );
+	}
 	
 	public static void main(String[] args) {
+		HashSet uriSet = new HashSet();
+		for( int i=0; i<args.length; ++i ) {
+			String arg = args[i];
+			if( !arg.startsWith("-") ) {
+				String uri = PathUtil.maybeNormalizeFileUri(arg);
+				collectImageUris( uri, uriSet );
+			}
+		}
+		
+		ArrayList uriList = new ArrayList(uriSet);
+		Collections.sort(uriList);
+		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch( Exception e ) {
@@ -573,10 +634,7 @@ public class PAMainWindow extends JFrame {
 				System.exit(0);
 			}
 		});
-		List l = new ArrayList();
-		l.add( "http://www.nuke24.net/images/bunny.jpg" );
-		l.add( "file:///F:/incoming/images/TOGoS/photos/2009/07/2009_07_01/085912-IMG_1514.JPG");
-		pam.setImageUriList(l);
+		pam.setImageUriList(uriList);
 		pam.goToIndex(1);
 	}
 }
