@@ -2,20 +2,15 @@ package togos.picturearchiver4_1;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.GraphicsEnvironment;
+import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Point;
-import java.awt.Rectangle;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
@@ -34,14 +29,16 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.Scrollable;
-import javax.swing.SwingConstants;
+import javax.swing.JTextField;
 import javax.swing.UIManager;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.LineBorder;
 
+import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
 
 public class PAMainWindow extends JFrame {
@@ -51,163 +48,6 @@ public class PAMainWindow extends JFrame {
 	public static final String ISDELETED = NS + "isDeleted";
 	public static final String ISMODIFIEDFROMORIGINAL = NS + "isModifiedFromOriginal";
 	public static final String SUBJECTTAGS = NS + "subjectTags";
-	
-	class InnerImagePanel extends JPanel implements Scrollable {
-		protected Image image;
-		protected float scale;
-		
-		public InnerImagePanel() {
-			super();
-			setBackground(Color.BLACK);
-		}
-		
-		protected Dimension getScaledImageSize() {
-			if( image == null ) {
-				return new Dimension(0,0);
-			}
-			int w = image.getWidth(null);
-			int h = image.getHeight(null);
-			return new Dimension( (int)(w*scale), (int)(h*scale) );
-		}
-		
-		public Dimension getPreferredSize() {
-			Dimension viewportSize = getParent().getSize();
-			int w, h;
-			Dimension s = getScaledImageSize();
-			w = s.width;
-			h = s.height;
-			if( w < viewportSize.width ) w = viewportSize.width;
-			if( h < viewportSize.height ) h = viewportSize.height;
-			return new Dimension(w,h);
-		}
-		
-		public void setImage(Image i, float scale) {
-			this.image = i;
-			this.scale = scale;
-			repaint();
-		}
-		
-		public void paint(Graphics g) {
-			super.paint(g);
-			if( image != null ) {
-				Dimension size = getParent().getSize();
-				Dimension scaledImageSize = getScaledImageSize();
-				int ix = (size.width > scaledImageSize.width) ? (size.width - scaledImageSize.width) / 2 : 0;
-				int iy = (size.height > scaledImageSize.height) ? (size.height - scaledImageSize.height) / 2 : 0;
-				g.drawImage(image, ix, iy, scaledImageSize.width, scaledImageSize.height, null);
-			}
-		}
-		
-		public Dimension getPreferredScrollableViewportSize() {
-			return getPreferredSize();
-		}
-		
-		public boolean getScrollableTracksViewportHeight() {
-			return false;
-		}
-		
-		public boolean getScrollableTracksViewportWidth() {
-			return false;
-		}
-		
-		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-			int amt; 
-			if( orientation == SwingConstants.HORIZONTAL ) {
-				amt = (int)(visibleRect.getWidth() / 8);
-			} else {
-				amt = (int)(visibleRect.getHeight() / 8);
-			}
-			if( amt < 1 ) amt = 1;
-			return amt;
-		}
-		
-
-		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-			return getScrollableBlockIncrement(visibleRect, orientation, direction);
-		}
-	}
-	
-	class DraggableScrollPane extends JScrollPane {
-		abstract class MouseDragHelper implements MouseListener, MouseMotionListener {
-			Component cursorComponent;
-			public MouseDragHelper( Component cursorComponent ) {
-				this.cursorComponent = cursorComponent;
-			}
-			
-			protected Cursor oldCursor;
-			
-			protected boolean dragging;
-			
-			protected int x, y;
-			protected float moveScaleX;
-			protected float moveScaleY;
-			
-			public void mouseDragged(MouseEvent e) {
-				mouseMoved(e);
-			}
-			public void mouseMoved(MouseEvent e) {
-				if( dragging ) {
-					int dx = (int)moveScaleX*(e.getX() - x);
-					int dy = (int)moveScaleY*(e.getY() - y);
-					dragDelta( dx, dy );
-				}
-				this.x = e.getX();
-				this.y = e.getY();
-			}
-			public void mouseClicked(MouseEvent e) {}
-			public void mouseEntered(MouseEvent e) {}
-			public void mouseExited(MouseEvent e) {}
-			public void mousePressed(MouseEvent e) {
-				this.x = e.getX();
-				this.y = e.getY();
-				if( e.getButton() == MouseEvent.BUTTON2 ) {
-					dragging = !dragging;
-					if( dragging ) {
-						Dimension viewSize = getViewport().getView().getPreferredSize();
-						moveScaleX = 2 * viewSize.width / getWidth();
-						moveScaleY = 2 * viewSize.height / getHeight();
-						cursorComponent.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-					} else {
-						cursorComponent.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-					}
-				} else {
-					dragging = true;
-					moveScaleX = -1;
-					moveScaleY = -1;
-					cursorComponent.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-				}
-			}
-			public void mouseReleased(MouseEvent e) {
-				if( e.getButton() == MouseEvent.BUTTON2 ) return;
-				dragging = false;
-				cursorComponent.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			}
-			
-			abstract void dragDelta( int dx, int dy );
-		}
-		
-		public DraggableScrollPane() {
-			super();
-			MouseDragHelper mdh = new MouseDragHelper(this) {
-				void dragDelta( int dx, int dy ) {
-					Point oldPosition = getViewport().getViewPosition();
-					Dimension viewSize = getViewport().getView().getPreferredSize();
-					int maxX = viewSize.width - getViewport().getWidth();
-					int maxY = viewSize.height - getViewport().getHeight();
-					int newX = oldPosition.x + dx;
-					int newY = oldPosition.y + dy;
-					if( newX > maxX ) newX = maxX; if( newX < 0 ) newX = 0;
-					if( newY > maxY ) newY = maxY; if( newY < 0 ) newY = 0;
-					getViewport().setViewPosition(
-						new Point( newX, newY )
-					);
-				}
-			};
-			
-			addMouseListener(mdh);
-			addMouseMotionListener(mdh);
-		}
-	}
 	
 	class ImagePanel extends DraggableScrollPane {
 		InnerImagePanel innerPanel;
@@ -233,7 +73,7 @@ public class PAMainWindow extends JFrame {
 		public void setImageAutoscale(Image i) {
 			float scaleX = (float)getViewport().getWidth() / i.getWidth(null);
 			float scaleY = (float)getViewport().getHeight() / i.getHeight(null);
-			float scaleQ = (scaleX < scaleY ? scaleX : scaleY) * 0.95f;
+			float scaleQ = (scaleX < scaleY ? scaleX : scaleY);
 			setImage( i, scaleQ < 1.0 ? scaleQ : 1.0f );
 		}
 	}
@@ -252,16 +92,21 @@ public class PAMainWindow extends JFrame {
 	
 	ImagePanel ip;
 	JPanel textPanel;
-	JLabel titleLabel;
-	JLabel tagsLabelLabel;
-	JLabel tagsLabel;
-	
-	JLabel statusLabelLabel;
-	// status labels
-	JLabel archivedLabel;
-	JLabel deletedLabel;
-	JLabel modifiedLabel;
-	JLabel doesNotExistLabel;
+	JPanel   titlePanel;
+	JLabel     titleLabel;
+	JPanel     pzPanel;
+	JLabel       positionLabel;
+	JLabel       zoomLabel;
+	JPanel   tagsPanel;
+	JLabel     tagsLabelLabel;
+	JTextField tagsInput;
+	JPanel   statusPanel;
+	JLabel     statusLabelLabel;
+	JPanel     statusSubPanel;
+	JLabel       archivedLabel;
+	JLabel       deletedLabel;
+	JLabel       modifiedLabel;
+	JLabel       doesNotExistLabel;
 	
 	float zoomUnit = 1.5f;
 	
@@ -269,25 +114,28 @@ public class PAMainWindow extends JFrame {
 		super();
 		setTitle("PictureArchiver4");
 		JPanel mainPanel = new JPanel(new BorderLayout());
+		mainPanel.setBackground(Color.BLACK);
 
 		ip = new ImagePanel();
 		ip.setBorder(null);
 		ip.setPreferredSize(new Dimension(512,384));
-		//ip.setBorder(new LineBorder(Color.BLUE));
 		mainPanel.add(ip, BorderLayout.CENTER);
 		
-		textPanel = new JPanel(new FlowLayout(FlowLayout.LEADING));
-		textPanel.setBackground(Color.BLACK);
-		
-		titleLabel = new JLabel();
+		titleLabel = new JLabel("", JLabel.LEADING);
+		titleLabel.setHorizontalTextPosition(JLabel.TRAILING);
 		titleLabel.setForeground(Color.WHITE);
-		titleLabel.setText("");
 		
-		statusLabelLabel = new JLabel("Status:");
+		positionLabel = new JLabel("");
+		positionLabel.setForeground(Color.GRAY);
+		
+		zoomLabel = new JLabel("");
+		zoomLabel.setForeground(Color.LIGHT_GRAY);
+		
+		statusLabelLabel = new JLabel(" Status: ");
 		statusLabelLabel.setVisible(false);
 		statusLabelLabel.setOpaque(true);
-		statusLabelLabel.setBackground(Color.LIGHT_GRAY);
-		statusLabelLabel.setForeground(Color.BLACK);
+		statusLabelLabel.setBackground(Color.DARK_GRAY);
+		statusLabelLabel.setForeground(Color.WHITE);
 		
 		archivedLabel = new JLabel("Archived");
 		archivedLabel.setVisible(false);
@@ -295,34 +143,64 @@ public class PAMainWindow extends JFrame {
 		
 		deletedLabel = new JLabel("Deleted");
 		deletedLabel.setVisible(false);
-		deletedLabel.setForeground(Color.YELLOW);
+		deletedLabel.setForeground(Color.RED);
 
 		modifiedLabel = new JLabel("Modified");
 		modifiedLabel.setVisible(false);
-		modifiedLabel.setForeground(Color.YELLOW);
+		modifiedLabel.setForeground(Color.GREEN);
 
 		doesNotExistLabel = new JLabel("Not Found");
 		doesNotExistLabel.setVisible(false);
-		doesNotExistLabel.setForeground(Color.YELLOW);
+		doesNotExistLabel.setForeground(Color.ORANGE);
 		
-		tagsLabelLabel = new JLabel("Tags:");
+		tagsInput = new JTextField("");
+		tagsInput.setBackground(Color.BLACK);
+		tagsInput.setForeground(new Color(0x00FF00));
+		tagsInput.setCaretColor(new Color(0x88FF88));
+		tagsInput.setBorder(new CompoundBorder(new LineBorder(Color.WHITE), BorderFactory.createEmptyBorder(0, 8, 0, 8)));
+		tagsInput.setVisible(false);
+
+		tagsLabelLabel = new JLabel(" Tags: ");
+		//tagsLabelLabel.setDisplayedMnemonic('t');
+		//tagsLabelLabel.setLabelFor(tagsLabel);
 		tagsLabelLabel.setOpaque(true);
 		tagsLabelLabel.setVisible(false);
-		tagsLabelLabel.setBackground(Color.LIGHT_GRAY);
-		tagsLabelLabel.setForeground(Color.BLACK);
+		tagsLabelLabel.setBackground(Color.DARK_GRAY);
+		tagsLabelLabel.setForeground(Color.WHITE);
 		
-		tagsLabel = new JLabel("");
-		tagsLabel.setVisible(false);
-		tagsLabel.setForeground(Color.CYAN);
+		pzPanel = new JPanel(new FlowLayout());
+		pzPanel.setOpaque(false);
 
-		textPanel.add(titleLabel);
-		textPanel.add(statusLabelLabel);
-		textPanel.add(archivedLabel);
-		textPanel.add(deletedLabel);
-		textPanel.add(modifiedLabel);
-		textPanel.add(doesNotExistLabel);
-		textPanel.add(tagsLabelLabel);
-		textPanel.add(tagsLabel);
+		titlePanel = new JPanel(new BorderLayout());
+		titlePanel.setOpaque(false);
+		
+		statusSubPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		statusSubPanel.setOpaque(false);
+		
+		statusPanel = new JPanel(new BorderLayout());
+		statusPanel.setOpaque(false);
+		
+		tagsPanel = new JPanel(new BorderLayout());
+		tagsPanel.setOpaque(false);
+		
+		textPanel = new JPanel(new GridLayout(3,1));
+		textPanel.setOpaque(false);
+		
+		pzPanel.add(positionLabel);
+		pzPanel.add(zoomLabel);
+		titlePanel.add(titleLabel, BorderLayout.CENTER);
+		titlePanel.add(pzPanel, BorderLayout.EAST);
+		statusSubPanel.add(archivedLabel);
+		statusSubPanel.add(deletedLabel);
+		statusSubPanel.add(modifiedLabel);
+		statusSubPanel.add(doesNotExistLabel);
+		statusPanel.add(statusLabelLabel, BorderLayout.WEST);
+		statusPanel.add(statusSubPanel, BorderLayout.CENTER);
+		tagsPanel.add(tagsLabelLabel, BorderLayout.WEST);
+		tagsPanel.add(tagsInput, BorderLayout.CENTER);
+		textPanel.add(titlePanel);
+		textPanel.add(statusPanel);
+		textPanel.add(tagsPanel);
 		mainPanel.add(textPanel, BorderLayout.SOUTH);
 		
 		getContentPane().add(mainPanel);
@@ -332,12 +210,23 @@ public class PAMainWindow extends JFrame {
 			public void keyPressed(KeyEvent e) {
 				if( e.getKeyCode() == KeyEvent.VK_LEFT ) {
 					goToPrevious();
+					e.consume();
 				} else if( e.getKeyCode() == KeyEvent.VK_RIGHT ) {
 					goToNext();
+					e.consume();
 				} else if( e.getKeyCode() == KeyEvent.VK_EQUALS || e.getKeyCode() == KeyEvent.VK_PLUS ) {
 					changeScale(zoomUnit);
+					e.consume();
 				} else if( e.getKeyCode() == KeyEvent.VK_MINUS ) {
 					changeScale(1/zoomUnit);
+					e.consume();
+				} else if( e.getKeyCode() == KeyEvent.VK_T ) {
+					// To prevent the 't' from being inserted on random occasions
+					tagsInput.setEnabled(false);
+					tagsInput.requestFocus();
+					tagsInput.setCaretPosition(tagsInput.getText().length());
+					tagsInput.setEnabled(true);
+					e.consume();
 				} else {
 					System.err.println("Key pressed " + e.getKeyCode());
 				}
@@ -362,6 +251,32 @@ public class PAMainWindow extends JFrame {
 		ip.setWheelScrollingEnabled(false);
 		ip.addMouseWheelListener(mwl);
 		addMouseWheelListener(mwl);
+		
+		class TagBoxListener implements FocusListener, KeyListener {
+			String focusText = null;
+			
+			public void focusGained(FocusEvent e) {
+				focusText = tagsInput.getText();
+			}
+			public void focusLost(FocusEvent e) {}
+			
+			public void keyPressed(KeyEvent e) {
+				if( e.getKeyCode() == KeyEvent.VK_ESCAPE ) {
+					setCurrentTags(focusText);
+					PAMainWindow.this.requestFocus();
+				} else if( e.getKeyCode() == KeyEvent.VK_ENTER ) {
+					saveTags(state.fakeUri, getCurrentTags());
+					PAMainWindow.this.requestFocus();
+				}
+			}
+			public void keyReleased(KeyEvent e) {}
+			public void keyTyped(KeyEvent e) {};
+		}
+		TagBoxListener tbl = new TagBoxListener();
+		
+		tagsInput.addFocusListener(tbl);
+		tagsInput.addKeyListener(tbl);
+		this.requestFocus();
 	}
 	
 	protected boolean isTrue( Map metadata, String name ) {
@@ -395,26 +310,35 @@ public class PAMainWindow extends JFrame {
 		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to String");
 	}
 	
+	protected String getCurrentTags() {
+		return tagsInput.getText().trim();
+	}
+	
+	protected void setCurrentTags( String tags ) {
+		tagsInput.setText(tags.trim());
+	}
+	
 	public void updateLabels( State s ) {
 		Map metadata = s.metadata;
 		String fakeUri = s.fakeUri;
-		String title;
-		String scaleText;
 		if( fakeUri == null ) {
-			title = "(No image)";
-			scaleText = "";
+			titleLabel.setText("(no image)");
+			zoomLabel.setText("");
 		} else {
-			title = fakeUri;
-			int maxTitleLength = 40;
-			if( title.length() > 40 ) {
+			String title = UriUtil.uriDecode(fakeUri);
+			// Do some guessing about how many chars can fit:
+			int maxTitleLength = titleLabel.getWidth() / 8;
+			if( title.length() > maxTitleLength ) {
 				title = "..." + title.substring(title.length()-maxTitleLength+3);
 			}
-			scaleText = " (" + new DecimalFormat("0.00").format(s.scale) + "x)";
+			titleLabel.setText(title);
+			zoomLabel.setText("(" + new DecimalFormat("0.00").format(s.scale) + "x)");
 		}
 		if( s.listIndex >= 0 && imageUriList != null ) {
-			title += " (" + (s.listIndex+1) + " of " + imageUriList.size() + ")";
+			positionLabel.setText(" " + (s.listIndex+1) + " of " + imageUriList.size() + " ");
+		} else {
+			positionLabel.setText("");
 		}
-		titleLabel.setText(title+scaleText);
 		
 		statusLabelLabel.setVisible(false);
 		if( isTrue( metadata, ISDELETED ) ) {
@@ -435,23 +359,25 @@ public class PAMainWindow extends JFrame {
 		}
 		
 		String tags = getString( metadata.get(SUBJECTTAGS) );
-		if( tags != null && tags.length() > 0 ) {
-			tagsLabel.setVisible(true);
-			tagsLabel.setText(tags);
-		} else {
-			tagsLabel.setVisible(false);
-		}
+		if( tags == null ) tags = "";
+		tagsLabelLabel.setVisible(true);
+		tagsInput.setVisible(true);
+		setCurrentTags( tags );
 	}
 	
 	public void setState( State s, boolean autoscale ) {
 		this.state = s;
 		if( autoscale ) {
+			// Update the labels so that the image panel is the right size...
+			updateLabels(s); validate();
+			// ...so it can auto-scale to that size 
 			ip.setImageAutoscale(s.image);
 			s.scale = ip.scale;
+			updateLabels(s);
 		} else {
 			ip.setImage(s.image, s.scale);
+			updateLabels(s);
 		}
-		updateLabels(s);
 	}
 	
 	public void changeScale( float multiply ) {
@@ -467,6 +393,10 @@ public class PAMainWindow extends JFrame {
 		s.realUri = realUri;
 		s.metadata = metadata;
 		setState( s, true );
+	}
+	
+	public void saveTags( String taggedUri, String tags ) {
+		System.err.println("Save tags " + tags);
 	}
 	
 	public Image getImage( String url ) {
@@ -508,6 +438,8 @@ public class PAMainWindow extends JFrame {
 	
 	public void setImage( int listIndex, String fakeUri ) {
 		HashMap metadata = new HashMap();
+		metadata.put(ISDELETED, Boolean.TRUE);
+		metadata.put(SUBJECTTAGS, "foo, bar");
 		
 		if( fakeUri == null ) {
 			setImage( listIndex, null, null, null, metadata );
