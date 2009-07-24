@@ -1,0 +1,29 @@
+Sort of based on Junko2 communication framework
+
+send command
+  get responses
+  - events{0-*}
+  - failure/result
+
+different command sending styles:
+  - call: send command, returning a response iterator; this is the most basic
+  - send: send command without expecting a response
+  - call-async: send command with a callback to handle responses, and return immediately
+
+
+Command < RRA.Request
+  uri
+  verb = 'POST'
+  content = Arguments
+
+Event < RRA.Response
+  name
+
+Result < RRA.Response
+  status
+  content
+  metadata
+
+Failure < Result
+  status = 500
+

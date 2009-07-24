@@ -38,17 +38,15 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 
+import togos.picturearchiver4_1.comframework.CommandHandler;
+import togos.picturearchiver4_1.comframework.CommandResponseStream;
+import togos.picturearchiver4_1.comframework.MappedCommandHandler;
+import togos.rra.Request;
+
 import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
 
-public class PAMainWindow extends JFrame {
-	public static final String NS = "http://ns.nuke24.net/PictureArchiver4.1/";
-	public static final String DOESNOTEXIST = NS + "doesNotExist";
-	public static final String ISARCHIVED = NS + "isArchived";
-	public static final String ISDELETED = NS + "isDeleted";
-	public static final String ISMODIFIEDFROMORIGINAL = NS + "isModifiedFromOriginal";
-	public static final String SUBJECTTAGS = NS + "subjectTags";
-	
+public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	class ImagePanel extends DraggableScrollPane {
 		InnerImagePanel innerPanel;
 		float scale = 1.0f;
@@ -87,9 +85,10 @@ public class PAMainWindow extends JFrame {
 		float scale;
 	}
 	
-	List imageUriList;
-	State state;
-	
+	ImageManager imageManager = new ImageManager();
+	MappedCommandHandler commandHandler = new MappedCommandHandler("/pa4/ui/");
+	KeyCommandIssuer kci = new KeyCommandIssuer(commandHandler);
+
 	ImagePanel ip;
 	JPanel textPanel;
 	JPanel   titlePanel;
@@ -107,11 +106,72 @@ public class PAMainWindow extends JFrame {
 	JLabel       deletedLabel;
 	JLabel       modifiedLabel;
 	JLabel       doesNotExistLabel;
-	
+
+	List imageUriList;
+	State state;
 	float zoomUnit = 1.5f;
 	
 	public PAMainWindow() {
 		super();
+		
+		imageManager.addResourceUpdateListener(this);
+		
+		commandHandler.putHandler("goToNext", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				goToNext(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("goToPrevious", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				goToPrevious(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("goToFirst", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				goToIndex(0); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("goToLast", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				goToIndex(imageUriList.size()-1); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("editTags", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				tagsInput.requestFocus(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("toggleCurrentDeleted", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				toggleCurrentDeleted(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("toggleCurrentArchived", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				toggleCurrentArchived(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("rotateCurrentRight", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				rotateCurrentRight(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("rotateCurrentLeft", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				rotateCurrentLeft(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("restoreCurrentOriginal", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				restoreCurrentOriginal(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("toggleFullscreen", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				toggleFullscreen(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		
 		setTitle("PictureArchiver4");
 		JPanel mainPanel = new JPanel(new BorderLayout());
 		mainPanel.setBackground(Color.BLACK);
@@ -206,30 +266,25 @@ public class PAMainWindow extends JFrame {
 		getContentPane().add(mainPanel);
 		this.setBackground(Color.ORANGE); // Shouldn't show up!
 		
+		kci.addBinding(KeyEvent.VK_LEFT, "/pa4/ui/goToPrevious");
+		kci.addBinding(KeyEvent.VK_RIGHT, "/pa4/ui/goToNext");
+		kci.addBinding(KeyEvent.VK_HOME, "/pa4/ui/goToFirst");
+		kci.addBinding(KeyEvent.VK_END, "/pa4/ui/goToLast");
+		kci.addBinding(KeyEvent.VK_EQUALS, "/pa4/ui/zoomIn");
+		kci.addBinding(KeyEvent.VK_PLUS, "/pa4/ui/zoomIn");
+		kci.addBinding(KeyEvent.VK_MINUS, "/pa4/ui/zoomOut");
+		kci.addBinding(KeyEvent.VK_DELETE, "/pa4/ui/toggleCurrentDeleted");
+		kci.addBinding(KeyEvent.VK_O, "/pa4/ui/restoreCurrentOriginal");
+		kci.addBinding(KeyEvent.VK_R, "/pa4/ui/rotateCurrentRight");
+		kci.addBinding(KeyEvent.VK_L, "/pa4/ui/rotateCurrentLeft");
+		kci.addBinding(KeyEvent.VK_A, "/pa4/ui/toggleCurrentArchived");
+		kci.addBinding(KeyEvent.VK_T, "/pa4/ui/editTags");
+		kci.addBinding(KeyEvent.VK_F11, "/pa4/ui/toggleFullscreen");
+		
+		addKeyListener(kci);
 		addKeyListener(new KeyListener() {
 			public void keyPressed(KeyEvent e) {
-				if( e.getKeyCode() == KeyEvent.VK_LEFT ) {
-					goToPrevious();
-					e.consume();
-				} else if( e.getKeyCode() == KeyEvent.VK_RIGHT ) {
-					goToNext();
-					e.consume();
-				} else if( e.getKeyCode() == KeyEvent.VK_EQUALS || e.getKeyCode() == KeyEvent.VK_PLUS ) {
-					changeScale(zoomUnit);
-					e.consume();
-				} else if( e.getKeyCode() == KeyEvent.VK_MINUS ) {
-					changeScale(1/zoomUnit);
-					e.consume();
-				} else if( e.getKeyCode() == KeyEvent.VK_T ) {
-					// To prevent the 't' from being inserted on random occasions
-					tagsInput.setEnabled(false);
-					tagsInput.requestFocus();
-					tagsInput.setCaretPosition(tagsInput.getText().length());
-					tagsInput.setEnabled(true);
-					e.consume();
-				} else {
-					System.err.println("Key pressed " + e.getKeyCode());
-				}
+				System.err.println("Key pressed " + e.getKeyCode());
 			}
 			public void keyReleased(KeyEvent e) {
 			}
@@ -265,7 +320,7 @@ public class PAMainWindow extends JFrame {
 					setCurrentTags(focusText);
 					PAMainWindow.this.requestFocus();
 				} else if( e.getKeyCode() == KeyEvent.VK_ENTER ) {
-					saveTags(state.fakeUri, getCurrentTags());
+					saveCurrentTags();
 					PAMainWindow.this.requestFocus();
 				}
 			}
@@ -310,6 +365,33 @@ public class PAMainWindow extends JFrame {
 		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to String");
 	}
 	
+	public void toggleCurrentDeleted() {
+		if( isTrue(state.metadata, ImageManager.ISDELETED) ) {
+			imageManager.undelete(state.fakeUri);
+		} else {
+			imageManager.delete(state.fakeUri);
+		}
+	}
+	public void toggleCurrentArchived() {
+		if( isTrue(state.metadata, ImageManager.ISARCHIVED) ) {
+			imageManager.unarchive(state.fakeUri);
+		} else {
+			imageManager.archive(state.fakeUri);
+		}
+	}
+	public void rotateCurrentRight() {
+		imageManager.rotateRight(state.fakeUri);
+	}
+	public void rotateCurrentLeft() {
+		imageManager.rotateLeft(state.fakeUri);
+	}
+	public void restoreCurrentOriginal() {
+		imageManager.restoreOriginal(state.fakeUri);
+	}
+	public void saveCurrentTags() {
+		imageManager.saveTags(state.fakeUri, getCurrentTags());
+	}
+	
 	protected String getCurrentTags() {
 		return tagsInput.getText().trim();
 	}
@@ -340,31 +422,31 @@ public class PAMainWindow extends JFrame {
 			positionLabel.setText("");
 		}
 		
-		statusLabelLabel.setVisible(false);
-		if( isTrue( metadata, ISDELETED ) ) {
+		statusLabelLabel.setVisible(true);
+		deletedLabel.setVisible(false);
+		modifiedLabel.setVisible(false);
+		archivedLabel.setVisible(false);
+		doesNotExistLabel.setVisible(false);
+		if( isTrue( metadata, ImageManager.ISDELETED ) ) {
 			deletedLabel.setVisible(true);
-			statusLabelLabel.setVisible(true);
 		}
-		if( isTrue( metadata, ISMODIFIEDFROMORIGINAL ) ) {
+		if( isTrue( metadata, ImageManager.ISMODIFIEDFROMORIGINAL ) ) {
 			modifiedLabel.setVisible(true);
-			statusLabelLabel.setVisible(true);
 		}
-		if( isTrue( metadata, ISARCHIVED ) ) {
+		if( isTrue( metadata, ImageManager.ISARCHIVED ) ) {
 			archivedLabel.setVisible(true);
-			statusLabelLabel.setVisible(true);
 		}
-		if( isTrue( metadata, DOESNOTEXIST ) ) {
+		if( isTrue( metadata, ImageManager.DOESNOTEXIST ) ) {
 			doesNotExistLabel.setVisible(true);
-			statusLabelLabel.setVisible(true);
 		}
 		
-		String tags = getString( metadata.get(SUBJECTTAGS) );
+		String tags = getString( metadata.get(ImageManager.SUBJECTTAGS) );
 		if( tags == null ) tags = "";
 		tagsLabelLabel.setVisible(true);
 		tagsInput.setVisible(true);
 		setCurrentTags( tags );
 	}
-	
+
 	public void setState( State s, boolean autoscale ) {
 		this.state = s;
 		if( autoscale ) {
@@ -395,8 +477,25 @@ public class PAMainWindow extends JFrame {
 		setState( s, true );
 	}
 	
-	public void saveTags( String taggedUri, String tags ) {
-		System.err.println("Save tags " + tags);
+	public volatile boolean resizing = false;
+	
+	public void toggleFullscreen() {
+		resizing = true;
+		try {
+			dispose();
+			int estate = getExtendedState();
+			if( (estate & JFrame.MAXIMIZED_BOTH) == 0 ) {
+				setUndecorated(true);
+				setExtendedState(estate | JFrame.MAXIMIZED_BOTH);
+			} else {
+				setUndecorated(false);
+				setExtendedState(estate & ~JFrame.MAXIMIZED_BOTH);
+			}
+			pack();
+			setVisible(true);
+		} finally {
+			resizing = false;
+		}
 	}
 	
 	public Image getImage( String url ) {
@@ -436,11 +535,7 @@ public class PAMainWindow extends JFrame {
 		return null;
 	}
 	
-	public void setImage( int listIndex, String fakeUri ) {
-		HashMap metadata = new HashMap();
-		metadata.put(ISDELETED, Boolean.TRUE);
-		metadata.put(SUBJECTTAGS, "foo, bar");
-		
+	public void setImage( int listIndex, String fakeUri, Map metadata ) {
 		if( fakeUri == null ) {
 			setImage( listIndex, null, null, null, metadata );
 		}
@@ -454,7 +549,7 @@ public class PAMainWindow extends JFrame {
 		}
 		
 		if( fi.uri.indexOf("/.deleted/") != -1 || fi.uri.indexOf("/.originals/") != -1 ) {
-			metadata.put(ISDELETED, Boolean.TRUE);
+			metadata.put(ImageManager.ISDELETED, Boolean.TRUE);
 		}
 		
 		if( fi.image == null ) {
@@ -462,6 +557,10 @@ public class PAMainWindow extends JFrame {
 		} else {
 			setImage( listIndex, fi.image, fakeUri, fi.uri, metadata );
 		}
+	}
+	
+	public void refresh( boolean reloadMetadata ) {
+		setImage( state.listIndex, state.fakeUri, reloadMetadata ? imageManager.loadMetadata(state.fakeUri) : state.metadata );
 	}
 	
 	public void setImageUriList( List l ) {
@@ -474,7 +573,7 @@ public class PAMainWindow extends JFrame {
 		} else {
 			uri = (String)imageUriList.get(i);
 		}
-		setImage( i, uri );
+		setImage( i, uri, imageManager.loadMetadata(uri) );
 	}
 	
 	public void goToModIndex(int n) {
@@ -573,11 +672,16 @@ public class PAMainWindow extends JFrame {
 			public void windowClosing( WindowEvent e ) {
 				pam.dispose();
 			}
-			public void windowClosed( WindowEvent e ) {
-				System.exit(0);
-			}
+			public void windowClosed( WindowEvent e ) {}
 		});
 		pam.setImageUriList(uriList);
 		pam.goToIndex(1);
+	}
+
+	public void resourceUdated(ResourceUpdateEvent evt) {
+		if( !evt.getResourceUri().equals(this.state.fakeUri) ) return;
+
+		this.state.metadata.putAll(evt.getChangedMetadata());
+		refresh(false);
 	}
 }
