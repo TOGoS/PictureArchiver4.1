@@ -294,6 +294,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		kci.addBinding(KeyEvent.VK_L, "/pa4/ui/rotateCurrentLeft");
 		kci.addBinding(KeyEvent.VK_A, "/pa4/ui/toggleCurrentArchived");
 		kci.addBinding(KeyEvent.VK_T, "/pa4/ui/editTags");
+		kci.addBinding(KeyEvent.VK_ENTER, "/pa4/ui/editTags");
 		kci.addBinding(KeyEvent.VK_F11, "/pa4/ui/toggleFullscreen");
 		
 		addKeyListener(kci);
