@@ -1,18 +1,24 @@
 package togos.picturearchiver4_1;
 
 import java.awt.Image;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
 import contentcouch.app.Linker;
 import contentcouch.file.FileUtil;
+import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
 
 public class ImageManager {
@@ -133,6 +139,14 @@ public class ImageManager {
 		resourceUpdateListeners.remove(l);
 	}
 	
+	protected String getDirectoryUri( String uri ) {
+		int ls = uri.lastIndexOf('/');
+		if( ls != -1 ) {
+			return uri.substring(0,ls+1);
+		}
+		return null;
+	}
+	
 	public String getArchiveUri( String fakeUri ) {
 		String longestMatch = null;
 		for( Iterator i=archiveDirectoryUriMap.entrySet().iterator(); i.hasNext(); ) {
@@ -162,11 +176,79 @@ public class ImageManager {
 		return exists(munge(uri,".originals"));
 	}
 	
+	protected File getTagFile( String fakeUri ) {
+		String directoryUri = getDirectoryUri(fakeUri);
+		String archiveDirUri = getArchiveUri(directoryUri);
+		if( archiveDirUri != null ) directoryUri = archiveDirUri;
+		return getFile(directoryUri + ".pa4-tags", true);
+	}
+	
+	public TreeMap loadAllTags( File tagFile ) {
+		try {
+			TreeMap fileTags = new TreeMap();
+			if( !tagFile.exists() ) return fileTags;
+			BufferedReader r = new BufferedReader(new FileReader(tagFile));
+			String line;
+			while( (line = r.readLine()) != null ) {
+				line = line.trim();
+				if( line.length() == 0 ) continue;
+				if( line.startsWith("#") ) continue;
+				String[] partz = line.split("\t");
+				
+				String file = null;
+				String tags = null;
+				for( int i=0; i<partz.length; ++i ) {
+					String uri = partz[i];
+					if( uri.indexOf(':') == -1 || uri.startsWith("file:")) {
+						file = uri;
+					} else if( uri.startsWith("x-metadata:") ) {
+						String md = uri.substring(11);
+						String[] mdParts = md.split(";");
+						for( int j=0; j<mdParts.length; ++j ) {
+							String mdPart = mdParts[j];
+							if( mdPart.startsWith("tags=") ) {
+								tags = (tags == null ? "" : tags + ", ") + UriUtil.uriDecode(mdPart.substring(5));
+							}
+						}
+					}
+				}
+				if( file != null && tags != null ) {
+					String ft = (String)fileTags.get(file);
+					fileTags.put(file, ft == null ? tags : ft + ", " + tags );
+				}
+			}
+			return fileTags;
+		} catch( IOException e1 ) {
+			throw new RuntimeException(e1);
+		}
+	}
+	
+	public void saveAllTags( File tagFile, Map tags ) {
+		try {
+			FileUtil.mkParentDirs(tagFile);
+			PrintWriter w = new PrintWriter(new FileWriter(tagFile));
+			for( Iterator i=tags.entrySet().iterator(); i.hasNext(); ) {
+				Map.Entry e = (Map.Entry)i.next();
+				w.println((String)e.getKey() + "\tx-metadata:tags=" + UriUtil.uriEncode((String)e.getValue()));
+			}
+			w.close();
+		} catch( IOException e1 ) {
+			throw new RuntimeException(e1);
+		}
+	}
+	
+	public String loadTags( String fakeUri ) {
+		File tagFile = getTagFile(fakeUri);
+		Map allTags = loadAllTags(tagFile);
+		return (String)allTags.get(fakeUri.substring(fakeUri.lastIndexOf('/')+1));
+	}
+	
 	public Map loadMetadata( String fakeUri ) {
 		HashMap metadata = new HashMap();
 		metadata.put(ISDELETED, Boolean.valueOf(isDeleted(fakeUri)));
 		metadata.put(ISARCHIVED, Boolean.valueOf(isArchived(fakeUri)));
 		metadata.put(ISMODIFIEDFROMORIGINAL, Boolean.valueOf(isModified(fakeUri)));
+		metadata.put(SUBJECTTAGS, loadTags(fakeUri) );
 		return metadata;
 	}
 	
@@ -283,6 +365,10 @@ public class ImageManager {
 	}
 
 	public void saveTags(String fakeUri, String tags) {
-		resourceUpdated(fakeUri, SUBJECTTAGS, tags);
+		File tagFile = getTagFile(fakeUri);
+		Map allTags = loadAllTags(tagFile);
+		String tagKey = fakeUri.substring(fakeUri.lastIndexOf('/')+1);
+		allTags.put(tagKey, tags);
+		saveAllTags(tagFile, allTags);
 	}
 }
