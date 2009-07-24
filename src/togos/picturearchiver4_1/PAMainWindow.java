@@ -39,6 +39,7 @@ import togos.picturearchiver4_1.ImageManager.FoundResource;
 import togos.picturearchiver4_1.comframework.CommandHandler;
 import togos.picturearchiver4_1.comframework.CommandResponseStream;
 import togos.picturearchiver4_1.comframework.MappedCommandHandler;
+import togos.rra.Arguments;
 import togos.rra.BaseRequest;
 import togos.rra.Request;
 import contentcouch.misc.UriUtil;
@@ -121,6 +122,12 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		
 		imageManager.addResourceUpdateListener(this);
 		
+		commandHandler.putHandler("goToDelta", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				goToModIndex(state.listIndex + ((Integer)((Arguments)command.getContent()).getPositionalArguments().get(0)).intValue());
+				return CommandResponseStream.NORESPONSE;
+			}
+		});
 		commandHandler.putHandler("goToNext", new CommandHandler() {
 			public CommandResponseStream handleCommand(Request command) {
 				goToNext(); return CommandResponseStream.NORESPONSE;
@@ -282,6 +289,9 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		this.setBackground(Color.ORANGE); // Shouldn't show up!
 		
 		kci.addBinding(KeyEvent.VK_LEFT, "/pa4/ui/goToPrevious");
+		kci.addBinding(KeyEvent.VK_RIGHT, "/pa4/ui/goToNext");
+		kci.addBinding(KeyEvent.VK_PAGE_DOWN, "/pa4/ui/goToDelta", new Integer(10));
+		kci.addBinding(KeyEvent.VK_PAGE_UP, "/pa4/ui/goToDelta", new Integer(-10));
 		kci.addBinding(KeyEvent.VK_RIGHT, "/pa4/ui/goToNext");
 		kci.addBinding(KeyEvent.VK_HOME, "/pa4/ui/goToFirst");
 		kci.addBinding(KeyEvent.VK_END, "/pa4/ui/goToLast");

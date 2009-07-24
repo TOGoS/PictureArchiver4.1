@@ -2,10 +2,12 @@ package togos.picturearchiver4_1;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.Collections;
 import java.util.HashMap;
 
 import togos.picturearchiver4_1.comframework.CommandHandler;
 import togos.picturearchiver4_1.comframework.CommandResponseStream;
+import togos.rra.BaseArguments;
 import togos.rra.BaseRequest;
 import togos.rra.Request;
 
@@ -18,15 +20,21 @@ public class KeyCommandIssuer implements KeyListener {
 	}
 	
 	public void addBinding( int keyCode, String uri ) {
-		keyBindings.put( new Integer(keyCode), uri );
+		BaseRequest req = new BaseRequest(Request.VERB_POST, uri);
+		keyBindings.put( new Integer(keyCode), req );
+	}
+
+	public void addBinding( int keyCode, String uri, Object arg ) {
+		BaseRequest req = new BaseRequest(Request.VERB_POST, uri, BaseArguments.single(arg), Collections.EMPTY_MAP );
+		keyBindings.put( new Integer(keyCode), req );
 	}
 
 	public void keyPressed(KeyEvent e) {
-		String commandUri = (String)keyBindings.get(new Integer(e.getKeyCode()));
-		if( commandUri != null ) {
-			CommandResponseStream rs = commandHandler.handleCommand(new BaseRequest(Request.VERB_POST, commandUri));
+		Request command = (Request)keyBindings.get(new Integer(e.getKeyCode()));
+		if( command != null ) {
+			CommandResponseStream rs = commandHandler.handleCommand(command);
 			if( rs == null ) {
-				System.err.println("No response to <" + commandUri + ">, triggered by key " + e.getKeyCode());
+				System.err.println("No response to <" + command.getUri() + ">, triggered by key " + e.getKeyCode());
 			}
 			e.consume();
 		}
