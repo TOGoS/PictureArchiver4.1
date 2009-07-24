@@ -17,7 +17,6 @@ public class MappedCommandHandler extends BaseCommandHandler {
 	
 	protected CommandResponseStream _handleCommand(Request command) {
 		CommandHandler ch = (CommandHandler)commandHandlers.get(command.getUri());
-		System.err.println("Got " + command.getUri());
 		if( ch == null ) return null;
 		return ch.handleCommand(command);
 	}

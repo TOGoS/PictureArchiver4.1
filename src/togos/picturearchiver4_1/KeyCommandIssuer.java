@@ -24,10 +24,9 @@ public class KeyCommandIssuer implements KeyListener {
 	public void keyPressed(KeyEvent e) {
 		String commandUri = (String)keyBindings.get(new Integer(e.getKeyCode()));
 		if( commandUri != null ) {
-			System.err.println("Issuing command " + commandUri);
 			CommandResponseStream rs = commandHandler.handleCommand(new BaseRequest(Request.VERB_POST, commandUri));
 			if( rs == null ) {
-				System.err.println("No response to " + commandUri);
+				System.err.println("No response to <" + commandUri + ">, triggered by key " + e.getKeyCode());
 			}
 			e.consume();
 		}

@@ -16,8 +16,6 @@ import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -38,11 +35,12 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 
+import togos.picturearchiver4_1.ImageManager.FoundResource;
 import togos.picturearchiver4_1.comframework.CommandHandler;
 import togos.picturearchiver4_1.comframework.CommandResponseStream;
 import togos.picturearchiver4_1.comframework.MappedCommandHandler;
+import togos.rra.BaseRequest;
 import togos.rra.Request;
-
 import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
 
@@ -108,8 +106,15 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	JLabel       doesNotExistLabel;
 
 	List imageUriList;
-	State state;
+	State state = new State();
 	float zoomUnit = 1.5f;
+	
+	protected void doCommand(String name) {
+		Request req = new BaseRequest(Request.VERB_POST, name);
+		if( commandHandler.handleCommand(req) == null ) {
+			System.err.println("Unhandled command <" + name + ">");
+		}
+	}
 	
 	public PAMainWindow() {
 		super();
@@ -169,6 +174,16 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		commandHandler.putHandler("toggleFullscreen", new CommandHandler() {
 			public CommandResponseStream handleCommand(Request command) {
 				toggleFullscreen(); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("zoomIn", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				changeScale(zoomUnit); return CommandResponseStream.NORESPONSE;
+			}
+		});
+		commandHandler.putHandler("zoomOut", new CommandHandler() {
+			public CommandResponseStream handleCommand(Request command) {
+				changeScale(1/zoomUnit); return CommandResponseStream.NORESPONSE;
 			}
 		});
 		
@@ -282,24 +297,15 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		kci.addBinding(KeyEvent.VK_F11, "/pa4/ui/toggleFullscreen");
 		
 		addKeyListener(kci);
-		addKeyListener(new KeyListener() {
-			public void keyPressed(KeyEvent e) {
-				System.err.println("Key pressed " + e.getKeyCode());
-			}
-			public void keyReleased(KeyEvent e) {
-			}
-			public void keyTyped(KeyEvent e) {
-			}
-		});
 		
 		MouseWheelListener mwl = new MouseWheelListener() {
 			public void mouseWheelMoved(MouseWheelEvent e) {
 				if( e.getWheelRotation() < 0 ) {
-					changeScale(zoomUnit);
+					doCommand("/pa4/ui/zoomIn");
 				} else {
-					changeScale(1/zoomUnit);
+					doCommand("/pa4/ui/zoomOut");
 				}
-				//e.consume();
+				e.consume();
 			}
 		};
 		
@@ -477,62 +483,38 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		setState( s, true );
 	}
 	
-	public volatile boolean resizing = false;
+	protected boolean nonFullscreenUndecorated = false;
+	int nonFullscreenEstate = 0;
+	Dimension nonFullscreenSize = null;
+	protected boolean fullscreen = false;
+	
+	public void setFullscreen( boolean fullscreen ) {
+		if( this.fullscreen == fullscreen ) return;
+		this.fullscreen = fullscreen;
+
+		dispose();
+		if( fullscreen ) {
+			nonFullscreenEstate = getExtendedState();
+			nonFullscreenSize = getSize();
+			setUndecorated(true);
+			setExtendedState(nonFullscreenEstate | JFrame.MAXIMIZED_BOTH);
+			validate();
+		} else {
+			setUndecorated(nonFullscreenUndecorated);
+			if( nonFullscreenSize != null) {
+				setExtendedState(nonFullscreenEstate);
+				setSize(nonFullscreenSize);
+				validate();
+			} else {
+				setExtendedState(getExtendedState() & ~JFrame.MAXIMIZED_BOTH);
+				pack();
+			}
+		}
+		setVisible(true);		
+	}
 	
 	public void toggleFullscreen() {
-		resizing = true;
-		try {
-			dispose();
-			int estate = getExtendedState();
-			if( (estate & JFrame.MAXIMIZED_BOTH) == 0 ) {
-				setUndecorated(true);
-				setExtendedState(estate | JFrame.MAXIMIZED_BOTH);
-			} else {
-				setUndecorated(false);
-				setExtendedState(estate & ~JFrame.MAXIMIZED_BOTH);
-			}
-			pack();
-			setVisible(true);
-		} finally {
-			resizing = false;
-		}
-	}
-	
-	public Image getImage( String url ) {
-		try {
-			return ImageIO.read(new URL(url));
-		} catch( IOException e ) {
-			return null;
-		}
-	}
-	
-	class FoundImage {
-		public FoundImage( String uri, Image img ) {
-			this.uri = uri;
-			this.image = img;
-		}
-		public Image image;
-		public String uri;
-	}
-	
-	public FoundImage findImage( String fakeUri ) {
-		Image i;
-		String realUri = fakeUri;
-		
-		i = getImage( realUri ); if( i != null ) return new FoundImage( realUri, i );
-
-		int ls = fakeUri.lastIndexOf('/');
-		if( ls != -1 ) {
-			String fakeRoot = fakeUri.substring(0,ls);
-			String fakeFile = fakeUri.substring(ls+1);
-			
-			realUri = fakeRoot + "/.deleted/" + fakeFile;
-			i = getImage( realUri ); if( i != null ) return new FoundImage( realUri, i );
-			
-			realUri = fakeRoot + "/.originals/" + fakeFile;
-			i = getImage( realUri ); if( i != null ) return new FoundImage( realUri, i );
-		}
-		return null;
+		setFullscreen( !fullscreen );
 	}
 	
 	public void setImage( int listIndex, String fakeUri, Map metadata ) {
@@ -540,23 +522,23 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			setImage( listIndex, null, null, null, metadata );
 		}
 		
-		FoundImage fi;
+		FoundResource fi;
 		setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		try {
-			fi = findImage(fakeUri);
+			fi = ImageManager.findImage(fakeUri);
 		} finally {
 			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 		}
 		
-		if( fi.uri.indexOf("/.deleted/") != -1 || fi.uri.indexOf("/.originals/") != -1 ) {
-			metadata.put(ImageManager.ISDELETED, Boolean.TRUE);
-		}
-		
-		if( fi.image == null ) {
-			setImage( listIndex, null, fakeUri, null, metadata );
+		if( fi.content == null ) {
+			setImage( listIndex, null, fakeUri, fi.uri, metadata );
 		} else {
-			setImage( listIndex, fi.image, fakeUri, fi.uri, metadata );
+			setImage( listIndex, (Image)fi.content, fakeUri, fi.uri, metadata );
 		}
+	}
+	
+	public void setImage( int listIndex, String fakeUri ) {
+		setImage( listIndex, fakeUri, imageManager.loadMetadata(fakeUri) );
 	}
 	
 	public void refresh( boolean reloadMetadata ) {
@@ -573,7 +555,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		} else {
 			uri = (String)imageUriList.get(i);
 		}
-		setImage( i, uri, imageManager.loadMetadata(uri) );
+		setImage( i, uri );
 	}
 	
 	public void goToModIndex(int n) {
@@ -591,13 +573,6 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		goToModIndex( state.listIndex + 1 );
 	}
 
-	protected static File getFile(String uri) {
-		if( uri.startsWith("file:" ) ) {
-			return new File(PathUtil.parseFilePathOrUri(uri).toString());
-		}
-		return null;
-	}
-
 	protected static boolean looksLikeImagePath( String path ) {
 		path = path.toLowerCase();
 		// TODO: add more image format extensions....
@@ -608,6 +583,10 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		int delidx = path.indexOf("/.deleted/");
 		if( delidx != -1 ) {
 			path = path.substring(0,delidx) + path.substring(delidx+9);
+		}
+		delidx = path.indexOf("/.originals/");
+		if( delidx != -1 ) {
+			path = path.substring(0,delidx) + path.substring(delidx+11);
 		}
 		return path;
 	}
@@ -622,15 +601,12 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				}
 			}
 		} else if( looksLikeImagePath(base.getPath()) ) {
-			imageUriSet.add(PathUtil.maybeNormalizeFileUri(getFakePath(base.getAbsolutePath())));
+			imageUriSet.add(getFakePath(PathUtil.maybeNormalizeFileUri(base.getAbsolutePath())));
 		}
 	}
 	
 	protected static void collectImageUris( String base, Set uriList ) {
-		File file = getFile(base);
-		if( file == null ) {
-			throw new RuntimeException("I only handle file URIs, for now...");
-		}
+		File file = ImageManager.getFile(base, true);
 		collectImageUris( file, uriList );
 	}
 	
@@ -638,12 +614,20 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		HashSet uriSet = new HashSet();
 		boolean maximize = false;
 		boolean undecorate = false;
+		boolean fullscreen = false;
+		HashMap archiveDirectoryUriMap = new HashMap();
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
 			if( "-noborder".equals(arg) ) {
 				undecorate = true;
 			} else if( "-maximize".equals(arg) ) {
 				maximize = true;
+			} else if( "-fullscreen".equals(arg) ) {
+				fullscreen = true;
+			} else if( "-archive-map".equals(arg) ) {
+				String inDir = ImageManager.getFileUri(args[++i]);
+				String outDir = ImageManager.getFileUri(args[++i]);
+				archiveDirectoryUriMap.put(inDir,outDir);
 			} else if( !arg.startsWith("-") ) {
 				String uri = PathUtil.maybeNormalizeFileUri(arg);
 				collectImageUris( uri, uriSet );
@@ -664,9 +648,15 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		}
 		
 		final PAMainWindow pam = new PAMainWindow();
-		if( undecorate ) pam.setUndecorated(true);
-		pam.pack();
-		if( maximize ) pam.setExtendedState(pam.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+		pam.imageManager.archiveDirectoryUriMap = archiveDirectoryUriMap;
+		pam.nonFullscreenUndecorated = undecorate;
+		if( undecorate | fullscreen ) pam.setUndecorated(true);
+		if( maximize | fullscreen ) {
+			pam.setExtendedState(pam.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+			pam.validate();
+		} else {
+			pam.pack();
+		}
 		pam.setVisible(true);
 		pam.addWindowListener(new WindowAdapter() {
 			public void windowClosing( WindowEvent e ) {
@@ -675,7 +665,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			public void windowClosed( WindowEvent e ) {}
 		});
 		pam.setImageUriList(uriList);
-		pam.goToIndex(1);
+		pam.goToIndex(0);
 	}
 
 	public void resourceUdated(ResourceUpdateEvent evt) {
