@@ -8,15 +8,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
 import contentcouch.app.Linker;
+import contentcouch.digest.DigestUtil;
+import contentcouch.file.FileBlob;
 import contentcouch.file.FileUtil;
 import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
@@ -46,15 +50,45 @@ public class ImageManager {
 		}
 	}
 	
-	protected static File getFile( String uri, boolean errorOnNonFileUri ) {
+	protected static String getFilePath( String uri, boolean errorOnNonFileUri) {
 		if( uri == null ) {
 			return null;
 		} else if( uri.startsWith("file:" ) ) {
-			return new File(PathUtil.parseFilePathOrUri(uri).toString());
+			return PathUtil.parseFilePathOrUri(uri).toString();
 		} else if( errorOnNonFileUri ) {
 			throw new RuntimeException("Not a file: URI: " + uri);
+		} else {
+			return null;
 		}
-		return null;
+	}
+	
+	public static List getList( Object o ) {
+		if( o == null ) return null;
+		if( o instanceof List ) return (List)o;
+		if( o instanceof String ) o = ((String)o).split(",\\s*");
+		if( o instanceof Object[] ) return Arrays.asList((Object[])o);
+		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to List");
+	}
+	
+	public static String getString( Object o ) {
+		if( o == null ) return null;
+		if( o instanceof String ) return (String)o;
+		if( o instanceof List ) o = ((List)o).toArray();
+		if( o instanceof Object[] ) {
+			String res = "";
+			Object[] arr = (Object[])o;
+			for( int i=0; i<arr.length; ++i ) {
+				res += arr[i].toString();
+				if( i<arr.length-1 ) res += ", ";
+			}
+			return res;
+		}
+		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to String");
+	}
+	
+	protected static File getFile( String uri, boolean errorOnNonFileUri ) {
+		String path = getFilePath(uri, errorOnNonFileUri);
+		return path == null ? null : new File(path);
 	}
 
 	public static String getFileUri( String path ) {
@@ -63,6 +97,10 @@ public class ImageManager {
 
 	public static String getFileUri( File f ) {
 		return getFileUri(f.getPath());
+	}
+	
+	public static String identify( String uri ) {
+		return DigestUtil.getSha1Urn(new FileBlob(getFilePath(uri, true)));
 	}
 	
 	public static boolean exists( String uri ) {
@@ -364,11 +402,16 @@ public class ImageManager {
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.FALSE);
 	}
 
+	MetadataService metadataService = new MetadataService(); 
+	
 	public void saveTags(String fakeUri, String tags) {
+		metadataService.saveTags(identify(fakeUri), getList(tags));
+		/*
 		File tagFile = getTagFile(fakeUri);
 		Map allTags = loadAllTags(tagFile);
 		String tagKey = fakeUri.substring(fakeUri.lastIndexOf('/')+1);
 		allTags.put(tagKey, tags);
 		saveAllTags(tagFile, allTags);
+		*/
 	}
 }

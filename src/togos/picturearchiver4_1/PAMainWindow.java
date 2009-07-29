@@ -18,7 +18,6 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,9 +34,9 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 
+import togos.mf.MessageIterator;
 import togos.picturearchiver4_1.ImageManager.FoundResource;
-import togos.picturearchiver4_1.comframework.CommandHandler;
-import togos.picturearchiver4_1.comframework.CommandResponseStream;
+import togos.picturearchiver4_1.comframework.BaseCommandHandler;
 import togos.picturearchiver4_1.comframework.MappedCommandHandler;
 import togos.rra.Arguments;
 import togos.rra.BaseRequest;
@@ -85,8 +84,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	}
 	
 	ImageManager imageManager = new ImageManager();
-	MappedCommandHandler commandHandler = new MappedCommandHandler("/pa4/ui/");
-	KeyCommandIssuer kci = new KeyCommandIssuer(commandHandler);
+	MappedCommandHandler requestSender = new MappedCommandHandler("/pa4/ui/");
+	KeyCommandIssuer kci = new KeyCommandIssuer(requestSender);
 
 	ImagePanel ip;
 	JPanel textPanel;
@@ -112,7 +111,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	
 	protected void doCommand(String name) {
 		Request req = new BaseRequest(Request.VERB_POST, name);
-		if( commandHandler.handleCommand(req) == null ) {
+		if( requestSender.call(req) == null ) {
 			System.err.println("Unhandled command <" + name + ">");
 		}
 	}
@@ -122,75 +121,75 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		
 		imageManager.addResourceUpdateListener(this);
 		
-		commandHandler.putHandler("goToDelta", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
+		requestSender.putHandler("goToDelta", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
 				goToModIndex(state.listIndex + ((Integer)((Arguments)command.getContent()).getPositionalArguments().get(0)).intValue());
-				return CommandResponseStream.NORESPONSE;
+				return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("goToNext", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				goToNext(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("goToNext", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				goToNext(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("goToPrevious", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				goToPrevious(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("goToPrevious", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				goToPrevious(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("goToFirst", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				goToIndex(0); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("goToFirst", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				goToIndex(0); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("goToLast", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				goToIndex(imageUriList.size()-1); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("goToLast", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				goToIndex(imageUriList.size()-1); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("editTags", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				tagsInput.requestFocus(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("editTags", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				tagsInput.requestFocus(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("toggleCurrentDeleted", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				toggleCurrentDeleted(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("toggleCurrentDeleted", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				toggleCurrentDeleted(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("toggleCurrentArchived", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				toggleCurrentArchived(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("toggleCurrentArchived", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				toggleCurrentArchived(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("rotateCurrentRight", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				rotateCurrentRight(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("rotateCurrentRight", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				rotateCurrentRight(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("rotateCurrentLeft", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				rotateCurrentLeft(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("rotateCurrentLeft", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				rotateCurrentLeft(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("restoreCurrentOriginal", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				restoreCurrentOriginal(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("restoreCurrentOriginal", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				restoreCurrentOriginal(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("toggleFullscreen", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				toggleFullscreen(); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("toggleFullscreen", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				toggleFullscreen(); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("zoomIn", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				changeScale(zoomUnit); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("zoomIn", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				changeScale(zoomUnit); return MessageIterator.NORESPONSE;
 			}
 		});
-		commandHandler.putHandler("zoomOut", new CommandHandler() {
-			public CommandResponseStream handleCommand(Request command) {
-				changeScale(1/zoomUnit); return CommandResponseStream.NORESPONSE;
+		requestSender.putHandler("zoomOut", new BaseCommandHandler() {
+			public MessageIterator _open(Request command) {
+				changeScale(1/zoomUnit); return MessageIterator.NORESPONSE;
 			}
 		});
 		
@@ -358,29 +357,6 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		return true;
 	}
 	
-	protected List getList( Object o ) {
-		if( o == null ) return null;
-		if( o instanceof List ) return (List)o;
-		if( o instanceof String ) o = ((String)o).split(",\\s*");
-		if( o instanceof Object[] ) return Arrays.asList((Object[])o);
-		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to List");
-	}
-	
-	protected String getString( Object o ) {
-		if( o == null ) return null;
-		if( o instanceof String ) return (String)o;
-		if( o instanceof List ) o = ((List)o).toArray();
-		if( o instanceof Object[] ) {
-			String res = "";
-			Object[] arr = (Object[])o;
-			for( int i=0; i<arr.length; ++i ) {
-				res += arr[i].toString();
-				if( i<arr.length-1 ) res += ", ";
-			}
-			return res;
-		}
-		throw new RuntimeException("Don't know how to convert " + o.getClass().getName() + " to String");
-	}
 	
 	public void toggleCurrentDeleted() {
 		if( isTrue(state.metadata, ImageManager.ISDELETED) ) {
@@ -457,7 +433,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			doesNotExistLabel.setVisible(true);
 		}
 		
-		String tags = getString( metadata.get(ImageManager.SUBJECTTAGS) );
+		String tags = ImageManager.getString( metadata.get(ImageManager.SUBJECTTAGS) );
 		if( tags == null ) tags = "";
 		tagsLabelLabel.setVisible(true);
 		tagsInput.setVisible(true);

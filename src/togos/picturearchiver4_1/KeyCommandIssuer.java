@@ -5,17 +5,17 @@ import java.awt.event.KeyListener;
 import java.util.Collections;
 import java.util.HashMap;
 
-import togos.picturearchiver4_1.comframework.CommandHandler;
-import togos.picturearchiver4_1.comframework.CommandResponseStream;
+import togos.mf.MessageIterator;
+import togos.mf.RequestHandler;
 import togos.rra.BaseArguments;
 import togos.rra.BaseRequest;
 import togos.rra.Request;
 
 public class KeyCommandIssuer implements KeyListener {
-	public CommandHandler commandHandler;
+	public RequestHandler commandHandler;
 	public HashMap keyBindings = new HashMap();
 	
-	public KeyCommandIssuer( CommandHandler commandHandler ) {
+	public KeyCommandIssuer( RequestHandler commandHandler ) {
 		this.commandHandler = commandHandler;
 	}
 	
@@ -32,7 +32,7 @@ public class KeyCommandIssuer implements KeyListener {
 	public void keyPressed(KeyEvent e) {
 		Request command = (Request)keyBindings.get(new Integer(e.getKeyCode()));
 		if( command != null ) {
-			CommandResponseStream rs = commandHandler.handleCommand(command);
+			MessageIterator rs = commandHandler.open(command);
 			if( rs == null ) {
 				System.err.println("No response to <" + command.getUri() + ">, triggered by key " + e.getKeyCode());
 			}
