@@ -405,13 +405,12 @@ public class ImageManager {
 	MetadataService metadataService = new MetadataService(); 
 	
 	public void saveTags(String fakeUri, String tags) {
-		metadataService.saveTags(identify(fakeUri), getList(tags));
-		/*
+		//metadataService.saveTags(identify(fakeUri), getList(tags));
+		
 		File tagFile = getTagFile(fakeUri);
 		Map allTags = loadAllTags(tagFile);
 		String tagKey = fakeUri.substring(fakeUri.lastIndexOf('/')+1);
 		allTags.put(tagKey, tags);
 		saveAllTags(tagFile, allTags);
-		*/
 	}
 }
