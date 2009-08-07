@@ -5,11 +5,12 @@ import java.awt.event.KeyListener;
 import java.util.Collections;
 import java.util.HashMap;
 
-import togos.mf.MessageIterator;
-import togos.mf.RequestHandler;
-import togos.rra.BaseArguments;
-import togos.rra.BaseRequest;
-import togos.rra.Request;
+import togos.mf.api.Request;
+import togos.mf.api.RequestHandler;
+import togos.mf.api.RequestVerbs;
+import togos.mf.api.ResponseSession;
+import togos.mf.base.BaseArguments;
+import togos.mf.base.BaseRequest;
 
 public class KeyCommandIssuer implements KeyListener {
 	public RequestHandler commandHandler;
@@ -20,19 +21,19 @@ public class KeyCommandIssuer implements KeyListener {
 	}
 	
 	public void addBinding( int keyCode, String uri ) {
-		BaseRequest req = new BaseRequest(Request.VERB_POST, uri);
+		BaseRequest req = new BaseRequest(RequestVerbs.VERB_POST, uri);
 		keyBindings.put( new Integer(keyCode), req );
 	}
 
 	public void addBinding( int keyCode, String uri, Object arg ) {
-		BaseRequest req = new BaseRequest(Request.VERB_POST, uri, BaseArguments.single(arg), Collections.EMPTY_MAP );
+		BaseRequest req = new BaseRequest(RequestVerbs.VERB_POST, uri, BaseArguments.single(arg), Collections.EMPTY_MAP );
 		keyBindings.put( new Integer(keyCode), req );
 	}
 
 	public void keyPressed(KeyEvent e) {
 		Request command = (Request)keyBindings.get(new Integer(e.getKeyCode()));
 		if( command != null ) {
-			MessageIterator rs = commandHandler.open(command);
+			ResponseSession rs = commandHandler.open(command);
 			if( rs == null ) {
 				System.err.println("No response to <" + command.getUri() + ">, triggered by key " + e.getKeyCode());
 			}

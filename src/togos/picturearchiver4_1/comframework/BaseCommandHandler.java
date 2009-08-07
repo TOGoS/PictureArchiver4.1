@@ -1,11 +1,11 @@
 package togos.picturearchiver4_1.comframework;
 
-import togos.mf.MessageIterator;
-import togos.mf.RequestHandler;
-import togos.rra.BaseRequest;
-import togos.rra.BaseResponse;
-import togos.rra.Request;
-import togos.rra.Response;
+import togos.mf.api.Request;
+import togos.mf.api.RequestHandler;
+import togos.mf.api.Response;
+import togos.mf.api.ResponseSession;
+import togos.mf.base.BaseRequest;
+import togos.mf.base.BaseResponse;
 
 public abstract class BaseCommandHandler implements RequestHandler {
 	public String commandPrefix;
@@ -18,9 +18,9 @@ public abstract class BaseCommandHandler implements RequestHandler {
 		this.commandPrefix = commandPrefix;
 	}
 	
-	protected abstract MessageIterator _open(Request command);
+	protected abstract ResponseSession _open(Request command);
 	
-	public MessageIterator open(Request command) {
+	public ResponseSession open(Request command) {
 		String uri = command.getUri();
 		if( uri.startsWith(commandPrefix) ) uri = uri.substring(commandPrefix.length());
 		else return null;
@@ -30,7 +30,7 @@ public abstract class BaseCommandHandler implements RequestHandler {
 	}
 	
 	public Response call(Request command) {
-		MessageIterator it = open(command);
+		ResponseSession it = open(command);
 		if( it == null ) {
 			return BaseResponse.RESPONSE_UNHANDLED;
 		}
@@ -43,7 +43,7 @@ public abstract class BaseCommandHandler implements RequestHandler {
 		return res;
 	}
 	
-	public void send(Request command) {
-		open(command);
+	public boolean send(Request command) {
+		return open(command) != null;
 	}
 }

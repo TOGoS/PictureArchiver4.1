@@ -34,13 +34,15 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
 
-import togos.mf.MessageIterator;
+import togos.mf.api.Request;
+import togos.mf.api.RequestVerbs;
+import togos.mf.api.ResponseSession;
+import togos.mf.base.BaseRequest;
+import togos.mf.base.ResponseSessions;
+import togos.mf.value.Arguments;
 import togos.picturearchiver4_1.ImageManager.FoundResource;
 import togos.picturearchiver4_1.comframework.BaseCommandHandler;
 import togos.picturearchiver4_1.comframework.MappedCommandHandler;
-import togos.rra.Arguments;
-import togos.rra.BaseRequest;
-import togos.rra.Request;
 import contentcouch.misc.UriUtil;
 import contentcouch.path.PathUtil;
 
@@ -110,7 +112,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	float zoomUnit = 1.5f;
 	
 	protected void doCommand(String name) {
-		Request req = new BaseRequest(Request.VERB_POST, name);
+		Request req = new BaseRequest(RequestVerbs.VERB_POST, name);
 		if( requestSender.call(req) == null ) {
 			System.err.println("Unhandled command <" + name + ">");
 		}
@@ -122,74 +124,74 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		imageManager.addResourceUpdateListener(this);
 		
 		requestSender.putHandler("goToDelta", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
+			public ResponseSession _open(Request command) {
 				goToModIndex(state.listIndex + ((Integer)((Arguments)command.getContent()).getPositionalArguments().get(0)).intValue());
-				return MessageIterator.NORESPONSE;
+				return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("goToNext", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				goToNext(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				goToNext(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("goToPrevious", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				goToPrevious(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				goToPrevious(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("goToFirst", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				goToIndex(0); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				goToIndex(0); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("goToLast", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				goToIndex(imageUriList.size()-1); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				goToIndex(imageUriList.size()-1); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("editTags", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				tagsInput.requestFocus(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				tagsInput.requestFocus(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("toggleCurrentDeleted", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				toggleCurrentDeleted(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				toggleCurrentDeleted(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("toggleCurrentArchived", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				toggleCurrentArchived(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				toggleCurrentArchived(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("rotateCurrentRight", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				rotateCurrentRight(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				rotateCurrentRight(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("rotateCurrentLeft", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				rotateCurrentLeft(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				rotateCurrentLeft(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("restoreCurrentOriginal", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				restoreCurrentOriginal(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				restoreCurrentOriginal(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("toggleFullscreen", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				toggleFullscreen(); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				toggleFullscreen(); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("zoomIn", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				changeScale(zoomUnit); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				changeScale(zoomUnit); return ResponseSessions.NORESPONSE;
 			}
 		});
 		requestSender.putHandler("zoomOut", new BaseCommandHandler() {
-			public MessageIterator _open(Request command) {
-				changeScale(1/zoomUnit); return MessageIterator.NORESPONSE;
+			public ResponseSession _open(Request command) {
+				changeScale(1/zoomUnit); return ResponseSessions.NORESPONSE;
 			}
 		});
 		

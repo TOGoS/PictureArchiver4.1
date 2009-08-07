@@ -1,0 +1,39 @@
+== Metadata service ==
+
+GET metadata?about-uri=<about URI>
+
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="...">
+		<Description rdf:about="urn:sha1:..." rdf:bagID="SOMEIDVALUE1">
+			...some arbitrary metadata
+		</Description>
+		
+		<Description rdf:about="urn:sha1:..." rdf:bagID="SOMEIDVALUE2">
+			...some arbitrary metadata
+		</Description>
+		
+		<!-- Metadata about the metadata -->
+		
+		<Description rdf:about="#SOMEIDVALUE1">
+			<dc:author>tog</dc:author>
+			<dc:created>2009-04-01</dc:created>
+		</Description>
+		
+		<Description rdf:about="#SOMEIDVALUE2">
+			<dc:author>yc</dc:author>
+			<dc:created>2009-08-01</dc:created>
+		</Description>
+	</rdf>
+
+POST metadata (with authorized username)
+
+	<Description about="urn:sha1:...">
+		...some arbitrary metadata
+	</Description>
+
+== Data service ==
+
+POST data (with authorized username)
+
+  ...arbitrary blob...
+  
+  by default, goes into 'netposted' sector
