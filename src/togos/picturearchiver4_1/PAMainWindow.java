@@ -69,8 +69,13 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		}
 		
 		public void setImageAutoscale(Image i) {
-			float scaleX = (float)getViewport().getWidth() / i.getWidth(null);
-			float scaleY = (float)getViewport().getHeight() / i.getHeight(null);
+			float scaleX, scaleY;
+			if( i != null ) {
+				scaleX = (float)getViewport().getWidth() / i.getWidth(null);
+				scaleY = (float)getViewport().getHeight() / i.getHeight(null);
+			} else {
+				scaleX = scaleY = 1.0f;
+			}
 			float scaleQ = (scaleX < scaleY ? scaleX : scaleY);
 			setImage( i, scaleQ < 1.0 ? scaleQ : 1.0f );
 		}
@@ -519,7 +524,9 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 		}
 		
-		if( fi.content == null ) {
+		if( fi == null ) {
+			setImage( listIndex, null, fakeUri, null, metadata );
+		} else if( fi.content == null ) {
 			setImage( listIndex, null, fakeUri, fi.uri, metadata );
 		} else {
 			setImage( listIndex, (Image)fi.content, fakeUri, fi.uri, metadata );
@@ -527,7 +534,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	}
 	
 	public void setImage( int listIndex, String fakeUri ) {
-		setImage( listIndex, fakeUri, imageManager.loadMetadata(fakeUri) );
+		setImage( listIndex, fakeUri, fakeUri == null ? Collections.EMPTY_MAP : imageManager.loadMetadata(fakeUri) );
 	}
 	
 	public void refresh( boolean reloadMetadata ) {
@@ -539,7 +546,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	}
 	public void goToIndex( int i ) {
 		String uri;
-		if( i<0 || i>imageUriList.size() ) {
+		if( i<0 || i>=imageUriList.size() ) {
 			uri = null;
 		} else {
 			uri = (String)imageUriList.get(i);
@@ -599,11 +606,21 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		collectImageUris( file, uriList );
 	}
 	
+	public static String USAGE =
+		"Usage: pa4 [options] <infile> <infile> <infile> ...\n" +
+		"Where <infile> is the path to a file or directory to operate on.\n" +
+		"Options:\n" +
+		"  -noborder\n" +
+		"  -maximize\n" +
+		"  -fullscreen\n" +
+		"  -archive-map <input dir> <archive dir>";
+	
 	public static void main(String[] args) {
 		HashSet uriSet = new HashSet();
 		boolean maximize = false;
 		boolean undecorate = false;
 		boolean fullscreen = false;
+		boolean inputsSpecified = false;
 		HashMap archiveDirectoryUriMap = new HashMap();
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
@@ -620,10 +637,21 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			} else if( !arg.startsWith("-") ) {
 				String uri = PathUtil.maybeNormalizeFileUri(arg);
 				collectImageUris( uri, uriSet );
+				inputsSpecified = true;
+			} else if( "-?".equals(arg) || "-h".equals(arg) || "-help".equals(arg) || "--help".equals(arg) ) {
+				System.out.println(USAGE);
+				System.exit(0);
 			} else {
 				System.err.println("Unrecognised argument: " + arg);
+				System.err.println(USAGE);
 				System.exit(1);
 			}
+		}
+		
+		if( !inputsSpecified ) {
+			System.err.println("No files or directories specified!");
+			System.err.println("Run with -? for usage information.");
+			System.exit(0);
 		}
 		
 		ArrayList uriList = new ArrayList(uriSet);

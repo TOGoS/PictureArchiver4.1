@@ -131,6 +131,7 @@ public class ImageManager {
 	}
 	
 	public static FoundResource findImage( String fakeUri ) {
+		if( fakeUri == null ) return null;
 		String realUri = findRealUri(fakeUri);
 		if( realUri != null ) {
 			return new FoundResource( realUri, getImage(realUri) );
