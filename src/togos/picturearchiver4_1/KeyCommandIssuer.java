@@ -6,17 +6,16 @@ import java.util.Collections;
 import java.util.HashMap;
 
 import togos.mf.api.Request;
-import togos.mf.api.RequestHandler;
 import togos.mf.api.RequestVerbs;
-import togos.mf.api.ResponseSession;
+import togos.mf.api.SendHandler;
 import togos.mf.base.BaseArguments;
 import togos.mf.base.BaseRequest;
 
 public class KeyCommandIssuer implements KeyListener {
-	public RequestHandler commandHandler;
+	public SendHandler commandHandler;
 	public HashMap keyBindings = new HashMap();
 	
-	public KeyCommandIssuer( RequestHandler commandHandler ) {
+	public KeyCommandIssuer( SendHandler commandHandler ) {
 		this.commandHandler = commandHandler;
 	}
 	
@@ -33,13 +32,15 @@ public class KeyCommandIssuer implements KeyListener {
 	public void keyPressed(KeyEvent e) {
 		Request command = (Request)keyBindings.get(new Integer(e.getKeyCode()));
 		if( command != null ) {
-			ResponseSession rs = commandHandler.open(command);
-			if( rs == null ) {
-				System.err.println("No response to <" + command.getUri() + ">, triggered by key " + e.getKeyCode());
+			if( commandHandler.send(command) ) {
+				e.consume(); 
+			} else {
+				StatusLog.log("<" + command.getResourceName() + "> unhandled; triggered by key " + e.getKeyCode());
 			}
 			e.consume();
 		}
 	}
+	
 	public void keyReleased(KeyEvent e) {};
 	public void keyTyped(KeyEvent e) {}
 }

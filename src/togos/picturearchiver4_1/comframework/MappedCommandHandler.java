@@ -3,8 +3,7 @@ package togos.picturearchiver4_1.comframework;
 import java.util.HashMap;
 
 import togos.mf.api.Request;
-import togos.mf.api.RequestHandler;
-import togos.mf.api.ResponseSession;
+import togos.mf.api.SendHandler;
 
 public class MappedCommandHandler extends BaseCommandHandler {
 	public MappedCommandHandler(String commandPrefix) {
@@ -13,13 +12,13 @@ public class MappedCommandHandler extends BaseCommandHandler {
 
 	protected HashMap commandHandlers = new HashMap();
 	
-	public void putHandler( String commandName, RequestHandler handler ) {
+	public void putHandler( String commandName, SendHandler handler ) {
 		commandHandlers.put( commandName, handler );
 	}
 	
-	protected ResponseSession _open(Request command) {
-		RequestHandler ch = (RequestHandler)commandHandlers.get(command.getUri());
-		if( ch == null ) return null;
-		return ch.open(command);
+	protected boolean _send(Request command) {
+		SendHandler ch = (SendHandler)commandHandlers.get(command.getResourceName());
+		if( ch == null ) return false;
+		return ch.send(command);
 	}
 }

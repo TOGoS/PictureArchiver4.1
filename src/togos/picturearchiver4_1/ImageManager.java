@@ -18,12 +18,11 @@ import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
-import contentcouch.app.Linker;
-import contentcouch.digest.DigestUtil;
-import contentcouch.file.FileBlob;
-import contentcouch.file.FileUtil;
-import contentcouch.misc.UriUtil;
-import contentcouch.path.PathUtil;
+import togos.picturearchiver4_1.util.FileUtil;
+import togos.picturearchiver4_1.util.Linker;
+import togos.picturearchiver4_1.util.PathUtil;
+import togos.picturearchiver4_1.util.UriUtil;
+
 
 public class ImageManager {
 	public static final String NS = "http://ns.nuke24.net/PictureArchiver4.1/";
@@ -44,6 +43,7 @@ public class ImageManager {
 	
 	public static Image getImage( String url ) {
 		try {
+			StatusLog.log("Reading "+url);
 			return ImageIO.read(new URL(url));
 		} catch( IOException e ) {
 			return null;
@@ -97,10 +97,6 @@ public class ImageManager {
 
 	public static String getFileUri( File f ) {
 		return getFileUri(f.getPath());
-	}
-	
-	public static String identify( String uri ) {
-		return DigestUtil.getSha1Urn(new FileBlob(getFilePath(uri, true)));
 	}
 	
 	public static boolean exists( String uri ) {
@@ -278,6 +274,7 @@ public class ImageManager {
 	
 	public String loadTags( String fakeUri ) {
 		File tagFile = getTagFile(fakeUri);
+		StatusLog.log("Loading tags from "+tagFile);
 		Map allTags = loadAllTags(tagFile);
 		return (String)allTags.get(fakeUri.substring(fakeUri.lastIndexOf('/')+1));
 	}
@@ -403,11 +400,7 @@ public class ImageManager {
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.FALSE);
 	}
 
-	MetadataService metadataService = new MetadataService(); 
-	
 	public void saveTags(String fakeUri, String tags) {
-		//metadataService.saveTags(identify(fakeUri), getList(tags));
-		
 		File tagFile = getTagFile(fakeUri);
 		Map allTags = loadAllTags(tagFile);
 		String tagKey = fakeUri.substring(fakeUri.lastIndexOf('/')+1);

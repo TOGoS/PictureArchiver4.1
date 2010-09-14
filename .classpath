@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ContentCouch"/>
-	<classpathentry kind="lib" path="ext-lib/togos.mf-2009.08.07b.jar"/>
+	<classpathentry kind="lib" path="ext-lib/togos.mf-latest.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
