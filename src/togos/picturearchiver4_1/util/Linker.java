@@ -4,7 +4,8 @@ package togos.picturearchiver4_1.util;
 import java.io.File;
 import java.io.IOException;
 
-public abstract class Linker {
+public abstract class Linker
+{
 	public static class LinkException extends RuntimeException {
 		public LinkException( String from, String to, String problem ) {
 			super( "Failed to create link from " + from + " to " + to + ": " + problem );
@@ -20,7 +21,7 @@ public abstract class Linker {
 		}
 	}
 	
-	public static class WinLinker extends Linker {
+	public static class FSUtilLinker extends Linker {
 		public void link( File target, File link ) {
 			try {
 				if( link.exists() ) throw new LinkException(target, link, link.getPath() + " already exists");
@@ -37,7 +38,7 @@ public abstract class Linker {
 		}
 	}
 	
-	public static class UnixLinker extends Linker {
+	public static class LnLinker extends Linker {
 		public void link( File target, File link ) {
 			try {
 				if( link.exists() ) throw new LinkException(target, link, link.getPath() + " already exists");
@@ -54,14 +55,14 @@ public abstract class Linker {
 		}
 	}
 	
-	protected static Linker instance;
+	public static Linker instance;
 	public static Linker getInstance() {
 		if( instance == null ) {
 			String whichOS = System.getProperty("os.name");
 			if( whichOS.indexOf("Windows") != -1 ) {
-				return new WinLinker();
+				return new FSUtilLinker();
 			} else {
-				return new UnixLinker();
+				return new LnLinker();
 			}
 		}
 		return instance;

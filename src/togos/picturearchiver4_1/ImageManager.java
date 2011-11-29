@@ -24,14 +24,15 @@ import togos.picturearchiver4_1.util.PathUtil;
 import togos.picturearchiver4_1.util.UriUtil;
 
 
-public class ImageManager {
+public class ImageManager
+{
 	public static final String NS = "http://ns.nuke24.net/PictureArchiver4.1/";
 	public static final String DOESNOTEXIST = NS + "doesNotExist";
 	public static final String ISARCHIVED = NS + "isArchived";
 	public static final String ISDELETED = NS + "isDeleted";
 	public static final String ISMODIFIEDFROMORIGINAL = NS + "isModifiedFromOriginal";
 	public static final String SUBJECTTAGS = NS + "subjectTags";
-		
+	
 	static class FoundResource {
 		public FoundResource( String uri, Object content ) {
 			this.uri = uri;
@@ -165,6 +166,7 @@ public class ImageManager {
 	}
 	
 	public HashMap archiveDirectoryUriMap = new HashMap();
+	public boolean touchingEnabled = true;
 
 	protected HashSet resourceUpdateListeners = new HashSet();
 	public void addResourceUpdateListener( ResourceUpdateListener l ) {
@@ -303,6 +305,19 @@ public class ImageManager {
 		resourceUpdated(fakeUri, false, key, value);
 	}
 	
+	protected void directoryUpdated( File dir ) {
+		if( touchingEnabled ) while( dir != null ) {
+			File ccUriFile = new File(dir + "/.ccouch-uri");
+			if( ccUriFile.exists() ) ccUriFile.delete();
+			dir = dir.getParentFile();
+		}
+	}
+	
+	protected void fileUpdated( File f ) {
+		File pDir = f.getParentFile();
+		if( pDir != null ) directoryUpdated(pDir);
+	}
+	
 	public void undelete(String fakeUri) {
 		String deletedUri = findRealUri( fakeUri );
 		File normalFile = getFile(fakeUri,true);
@@ -313,9 +328,10 @@ public class ImageManager {
 		} else {
 			deletedFile.renameTo(normalFile);
 		}
+		fileUpdated(normalFile);
 		resourceUpdated(fakeUri, ISDELETED, Boolean.FALSE);
 	}
-
+	
 	public void delete(String fakeUri) {
 		String deletedUri = munge(fakeUri,".deleted");
 		String realUri = findRealUri(fakeUri);
@@ -327,15 +343,17 @@ public class ImageManager {
 			FileUtil.mkParentDirs(deletedFile);
 			realFile.renameTo(deletedFile);
 		}
+		fileUpdated(deletedFile);
 		resourceUpdated(fakeUri, ISDELETED, Boolean.TRUE);
 	}
-
+	
 	public void unarchive(String fakeUri) {
 		File archiveFile = getFile(getArchiveUri(fakeUri), true);
 		if( archiveFile != null ) archiveFile.delete();
+		fileUpdated(archiveFile);
 		resourceUpdated(fakeUri, ISARCHIVED, Boolean.FALSE);
 	}
-
+	
 	public void archive(String fakeUri) {
 		File archiveFile = getFile(getArchiveUri(fakeUri), true);
 		if( archiveFile != null ) {
@@ -345,6 +363,7 @@ public class ImageManager {
 				Linker.getInstance().link(srcFile, archiveFile);
 			}
 		}
+		fileUpdated(archiveFile);
 		resourceUpdated(fakeUri, ISARCHIVED, Boolean.TRUE);
 	}
 	
@@ -378,6 +397,7 @@ public class ImageManager {
 		File dest = getFile(fakeUri,true);
 		sys(new String[]{"jpegtran","-rotate","90",src.getAbsolutePath(),dest.getAbsolutePath()});
 		dest.setLastModified(src.lastModified());
+		fileUpdated(dest);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
@@ -386,6 +406,7 @@ public class ImageManager {
 		File dest = getFile(fakeUri,true);
 		sys(new String[]{"jpegtran","-rotate","270",src.getAbsolutePath(),dest.getAbsolutePath()});
 		dest.setLastModified(src.lastModified());
+		fileUpdated(dest);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
@@ -397,6 +418,7 @@ public class ImageManager {
 			System.err.println("Mv " + originalFile + " " + normalFile);
 			move(originalFile,normalFile);
 		}
+		fileUpdated(normalFile);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.FALSE);
 	}
 

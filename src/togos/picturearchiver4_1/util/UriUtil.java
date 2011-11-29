@@ -2,7 +2,8 @@ package togos.picturearchiver4_1.util;
 
 import java.io.UnsupportedEncodingException;
 
-public class UriUtil {
+public class UriUtil
+{
 	public static final char[] HEXCHARS = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 	
 	protected static final boolean bac( byte[] arr, byte b ) {

@@ -36,11 +36,13 @@ import javax.swing.border.LineBorder;
 
 import togos.mf.api.Request;
 import togos.mf.api.RequestVerbs;
+import togos.mf.api.ResponseCodes;
 import togos.mf.base.BaseRequest;
 import togos.mf.value.Arguments;
 import togos.picturearchiver4_1.ImageManager.FoundResource;
 import togos.picturearchiver4_1.comframework.BaseCommandHandler;
 import togos.picturearchiver4_1.comframework.MappedCommandHandler;
+import togos.picturearchiver4_1.util.Linker;
 import togos.picturearchiver4_1.util.PathUtil;
 import togos.picturearchiver4_1.util.UriUtil;
 
@@ -115,8 +117,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	float zoomUnit = 1.5f;
 	
 	protected void doCommand(String name) {
-		Request req = new BaseRequest(RequestVerbs.VERB_POST, name);
-		if( !requestSender.send(req) ) {
+		Request req = new BaseRequest(RequestVerbs.POST, name);
+		if( requestSender.call(req).getStatus() == ResponseCodes.UNHANDLED ) {
 			StatusLog.log("Unhandled command <" + name + ">");
 		}
 	}
@@ -127,73 +129,73 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		imageManager.addResourceUpdateListener(this);
 		
 		requestSender.putHandler("goToDelta", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				goToModIndex(state.listIndex + ((Integer)((Arguments)command.getContent()).getPositionalArguments().get(0)).intValue());
 				return true;
 			}
 		});
 		requestSender.putHandler("goToNext", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				goToNext(); return true;
 			}
 		});
 		requestSender.putHandler("goToPrevious", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				goToPrevious(); return true;
 			}
 		});
 		requestSender.putHandler("goToFirst", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				goToIndex(0); return true;
 			}
 		});
 		requestSender.putHandler("goToLast", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				goToIndex(imageUriList.size()-1); return true;
 			}
 		});
 		requestSender.putHandler("editTags", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				tagsInput.requestFocus(); return true;
 			}
 		});
 		requestSender.putHandler("toggleCurrentDeleted", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				toggleCurrentDeleted(); return true;
 			}
 		});
 		requestSender.putHandler("toggleCurrentArchived", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				toggleCurrentArchived(); return true;
 			}
 		});
 		requestSender.putHandler("rotateCurrentRight", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				rotateCurrentRight(); return true;
 			}
 		});
 		requestSender.putHandler("rotateCurrentLeft", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				rotateCurrentLeft(); return true;
 			}
 		});
 		requestSender.putHandler("restoreCurrentOriginal", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				restoreCurrentOriginal(); return true;
 			}
 		});
 		requestSender.putHandler("toggleFullscreen", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				toggleFullscreen(); return true;
 			}
 		});
 		requestSender.putHandler("zoomIn", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				changeScale(zoomUnit); return true;
 			}
 		});
 		requestSender.putHandler("zoomOut", new BaseCommandHandler() {
-			public boolean _send(Request command) {
+			public boolean _call(Request command) {
 				changeScale(1/zoomUnit); return true;
 			}
 		});
@@ -606,6 +608,13 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		collectImageUris( file, uriList );
 	}
 	
+	public void resourceUdated(ResourceUpdateEvent evt) {
+		if( !evt.getResourceUri().equals(this.state.fakeUri) ) return;
+		
+		this.state.metadata.putAll(evt.getChangedMetadata());
+		refresh(false);
+	}
+	
 	public static String USAGE =
 		"Usage: pa4 [options] <infile> <infile> <infile> ...\n" +
 		"Where <infile> is the path to a file or directory to operate on.\n" +
@@ -613,6 +622,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		"  -noborder\n" +
 		"  -maximize\n" +
 		"  -fullscreen\n" +
+		"  -disable-touching ; don't try to update directory timestamps or delete\n" +
+		"                    ; .ccouch-uri files when moving/deleting files.\n" +
 		"  -archive-map <input dir> <archive dir>";
 	
 	public static void main(String[] args) {
@@ -622,6 +633,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		boolean fullscreen = false;
 		boolean inputsSpecified = false;
 		HashMap archiveDirectoryUriMap = new HashMap();
+		boolean disableTouching = false;
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
 			if( "-noborder".equals(arg) ) {
@@ -634,6 +646,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				String inDir = ImageManager.getFileUri(args[++i]);
 				String outDir = ImageManager.getFileUri(args[++i]);
 				archiveDirectoryUriMap.put(inDir,outDir);
+			} else if( "-disable-touching".equals(arg) ) {
+				disableTouching = true;
 			} else if( !arg.startsWith("-") ) {
 				String uri = PathUtil.maybeNormalizeFileUri(arg);
 				StatusLog.log("Collecting image URIs...");
@@ -642,6 +656,17 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				inputsSpecified = true;
 			} else if( "-v".equals(arg) ) {
 				StatusLog.setInstance( new StatusLog.VerboseStderrLogger() );
+			} else if( "-linker".equals(arg) ) {
+				++i;
+				String linkerName = args[i];
+				if( "ln".equals(linkerName) ) {
+					Linker.instance = new Linker.FSUtilLinker();
+				} else if( "fsutil".equals(linkerName) ) {
+					Linker.instance = new Linker.LnLinker();
+				} else {
+					throw new RuntimeException("Unrecognised linker: '"+linkerName+"'");
+				}
+				++i;
 			} else if( "-?".equals(arg) || "-h".equals(arg) || "-help".equals(arg) || "--help".equals(arg) ) {
 				System.out.println(USAGE);
 				System.exit(0);
@@ -675,6 +700,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		
 		StatusLog.log("Initializing window");
 		final PAMainWindow pam = new PAMainWindow();
+		if( disableTouching ) pam.imageManager.touchingEnabled = false;
 		pam.imageManager.archiveDirectoryUriMap = archiveDirectoryUriMap;
 		pam.nonFullscreenUndecorated = undecorate;
 		if( undecorate | fullscreen ) pam.setUndecorated(true);
@@ -694,12 +720,5 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		pam.setImageUriList(uriList);
 		StatusLog.log("Go to index 0...");
 		pam.goToIndex(0);
-	}
-
-	public void resourceUdated(ResourceUpdateEvent evt) {
-		if( !evt.getResourceUri().equals(this.state.fakeUri) ) return;
-
-		this.state.metadata.putAll(evt.getChangedMetadata());
-		refresh(false);
 	}
 }
