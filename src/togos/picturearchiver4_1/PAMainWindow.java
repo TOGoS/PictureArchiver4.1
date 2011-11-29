@@ -622,6 +622,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		"  -noborder\n" +
 		"  -maximize\n" +
 		"  -fullscreen\n" +
+		"  -linker {fsutil|ln}\n" +
 		"  -disable-touching ; don't try to update directory timestamps or delete\n" +
 		"                    ; .ccouch-uri files when moving/deleting files.\n" +
 		"  -archive-map <input dir> <archive dir>";
