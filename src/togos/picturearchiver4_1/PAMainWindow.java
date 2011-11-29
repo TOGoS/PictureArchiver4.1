@@ -661,9 +661,9 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				++i;
 				String linkerName = args[i];
 				if( "ln".equals(linkerName) ) {
-					Linker.instance = new Linker.FSUtilLinker();
-				} else if( "fsutil".equals(linkerName) ) {
 					Linker.instance = new Linker.LnLinker();
+				} else if( "fsutil".equals(linkerName) ) {
+					Linker.instance = new Linker.FSUtilLinker();
 				} else {
 					throw new RuntimeException("Unrecognised linker: '"+linkerName+"'");
 				}
