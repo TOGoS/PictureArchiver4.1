@@ -667,7 +667,6 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				} else {
 					throw new RuntimeException("Unrecognised linker: '"+linkerName+"'");
 				}
-				++i;
 			} else if( "-?".equals(arg) || "-h".equals(arg) || "-help".equals(arg) || "--help".equals(arg) ) {
 				System.out.println(USAGE);
 				System.exit(0);
