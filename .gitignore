@@ -1,3 +1,6 @@
+.settings
+.src.lst
 bin
 export
-.settings
+pa4.bat
+PA4.jar

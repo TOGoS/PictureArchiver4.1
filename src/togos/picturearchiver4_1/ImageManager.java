@@ -355,13 +355,18 @@ public class ImageManager
 	}
 	
 	public void archive(String fakeUri) {
-		File archiveFile = getFile(getArchiveUri(fakeUri), true);
+		String archiveUri = getArchiveUri(fakeUri);
+		File archiveFile = getFile(archiveUri, true);
 		if( archiveFile != null ) {
 			File srcFile = getFile(findRealUri(fakeUri), true);
 			if( srcFile != null ) {
 				FileUtil.mkParentDirs(archiveFile);
 				Linker.getInstance().link(srcFile, archiveFile);
 			}
+		}
+		if( archiveFile == null ) {
+			System.err.println("Couldn't determine archive file for fakeUri="+fakeUri+", archiveUri="+archiveUri);
+			return;
 		}
 		fileUpdated(archiveFile);
 		resourceUpdated(fakeUri, ISARCHIVED, Boolean.TRUE);
