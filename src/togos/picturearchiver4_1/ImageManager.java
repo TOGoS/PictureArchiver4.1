@@ -397,22 +397,21 @@ public class ImageManager
 		return null;
 	}
 	
-	public void rotateRight(String fakeUri) {
+	public void jpegtranRotate(String fakeUri, int degrees) {
 		File src = getBackedUpSource(fakeUri,true);
 		File dest = getFile(fakeUri,true);
-		sys(new String[]{"jpegtran","-rotate","90",src.getAbsolutePath(),dest.getAbsolutePath()});
+		sys(new String[]{"jpegtran","-rotate",String.valueOf(degrees),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
 		dest.setLastModified(src.lastModified());
 		fileUpdated(dest);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
+	public void rotateRight(String fakeUri) {
+		jpegtranRotate(fakeUri, 90);
+	}
+	
 	public void rotateLeft(String fakeUri) {
-		File src = getBackedUpSource(fakeUri,true);
-		File dest = getFile(fakeUri,true);
-		sys(new String[]{"jpegtran","-rotate","270",src.getAbsolutePath(),dest.getAbsolutePath()});
-		dest.setLastModified(src.lastModified());
-		fileUpdated(dest);
-		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
+		jpegtranRotate(fakeUri, 270);
 	}
 	
 	public void restoreOriginal(String fakeUri) {
