@@ -1,11 +1,18 @@
-.PHONY: all clean
+tjbuilder = java -jar util/TJBuilder.jar
+touch = ${tjbuilder} touch
 
-all: PA4.jar
+default: PA4.jar
+
+.PHONY: default clean .FORCE
+.DELETE_ON_ERROR:
 
 clean:
 	rm -rf bin PA4.jar .src.lst
 
-PA4.jar:
+src: .FORCE
+	${touch} -latest-within src -latest-within ext-lib src
+
+PA4.jar: src
 	rm -rf bin PA4.jar
 	cp -r src bin
 	find src -name *.java >.src.lst
