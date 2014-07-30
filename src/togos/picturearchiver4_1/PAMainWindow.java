@@ -354,7 +354,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		
 		tagsInput.addFocusListener(tbl);
 		tagsInput.addKeyListener(tbl);
-		this.requestFocus();
+		
+		requestFocusInWindow();
 	}
 	
 	protected boolean isTrue( Map metadata, String name ) {
@@ -504,7 +505,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 				pack();
 			}
 		}
-		setVisible(true);		
+		setVisible(true);
+		requestFocusInWindow();
 	}
 	
 	public void toggleFullscreen() {
