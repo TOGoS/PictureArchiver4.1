@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,6 +113,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 	JLabel       modifiedLabel;
 	JLabel       doesNotExistLabel;
 
+	List rootImageUriList;
 	List imageUriList;
 	State state = new State();
 	float zoomUnit = 1.5f;
@@ -197,6 +199,11 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		requestSender.putHandler("zoomOut", new BaseCommandHandler() {
 			public boolean _call(Request command) {
 				changeScale(1/zoomUnit); return true;
+			}
+		});
+		requestSender.putHandler("reloadImageList", new BaseCommandHandler() {
+			protected boolean _call(Request command) {
+				reloadImageList(); return true;
 			}
 		});
 		
@@ -312,6 +319,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		kci.addBinding(KeyEvent.VK_T, "/pa4/ui/editTags");
 		kci.addBinding(KeyEvent.VK_ENTER, "/pa4/ui/editTags");
 		kci.addBinding(KeyEvent.VK_F11, "/pa4/ui/toggleFullscreen");
+		kci.addBinding(KeyEvent.VK_F3, "/pa4/ui/reloadImageList");
 		
 		addKeyListener(kci);
 		
@@ -544,9 +552,32 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		setImage( state.listIndex, state.fakeUri, reloadMetadata ? imageManager.loadMetadata(state.fakeUri) : state.metadata );
 	}
 	
-	public void setImageUriList( List l ) {
+	public void setRootImageUriList( List roots ) {
+		rootImageUriList = roots;
+		reloadImageList();
+	}
+	public void setImageUriList( List roots, List l ) {
+		rootImageUriList = roots;
 		imageUriList = l;
 	}
+	
+	protected void reloadImageList() {
+		String oldFilename = null;
+		if( imageUriList != null && imageUriList.size() > state.listIndex ) {
+			oldFilename = (String)imageUriList.get(state.listIndex);
+		}
+		
+		Set l = new HashSet();
+		for( Iterator itr = rootImageUriList.iterator(); itr.hasNext(); ) {
+			collectImageUris( (String)itr.next(), l );
+		}
+		StatusLog.log( l.size() + " files found" );
+		imageUriList = new ArrayList(l);
+		Collections.sort(imageUriList);
+		
+		goToFile(oldFilename);
+	}
+	
 	public void goToIndex( int i ) {
 		String uri;
 		if( i<0 || i>=imageUriList.size() ) {
@@ -562,6 +593,15 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		if( n < 0 ) n = imageUriList.size() - (-n % imageUriList.size());
 		else n = n % imageUriList.size();
 		goToIndex(n);
+	}
+	
+	public void goToFile( String uri ) {
+		int idx = imageUriList.indexOf(uri);
+		if( idx != -1 ) {
+			goToIndex(idx);
+		} else {
+			System.err.println("Couldn't find "+uri+" in file list");
+		}
 	}
 	
 	public void goToPrevious() {
@@ -630,7 +670,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 		"  -archive-map <input dir> <archive dir>";
 	
 	public static void main(String[] args) {
-		HashSet uriSet = new HashSet();
+		HashSet rootUriSet = new HashSet();
 		boolean maximize = false;
 		boolean undecorate = false;
 		boolean fullscreen = false;
@@ -654,8 +694,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			} else if( !arg.startsWith("-") ) {
 				String uri = PathUtil.maybeNormalizeFileUri(arg);
 				StatusLog.log("Collecting image URIs...");
-				collectImageUris( uri, uriSet );
-				StatusLog.log( uriSet.size() + " files found" );
+				rootUriSet.add(uri);
 				inputsSpecified = true;
 			} else if( "-v".equals(arg) ) {
 				StatusLog.setInstance( new StatusLog.VerboseStderrLogger() );
@@ -685,13 +724,18 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			System.exit(0);
 		}
 		
-		ArrayList uriList = new ArrayList(uriSet);
-		Collections.sort(uriList);
+		//collectImageUris( uri, uriSet );
+		//StatusLog.log( uriSet.size() + " files found" );
+
+		ArrayList rootUriList = new ArrayList(rootUriSet);
+		Collections.sort(rootUriList);
 		
+		/*
 		if( uriList.size() == 0 ) {
 			System.err.println("No files found");
 			System.exit(0);
 		}
+		*/
 		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -719,7 +763,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener {
 			}
 			public void windowClosed( WindowEvent e ) {}
 		});
-		pam.setImageUriList(uriList);
+		pam.setRootImageUriList(rootUriList);
 		StatusLog.log("Go to index 0...");
 		pam.goToIndex(0);
 	}
