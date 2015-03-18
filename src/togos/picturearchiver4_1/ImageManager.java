@@ -225,36 +225,40 @@ public class ImageManager
 			TreeMap fileTags = new TreeMap();
 			if( !tagFile.exists() ) return fileTags;
 			BufferedReader r = new BufferedReader(new FileReader(tagFile));
-			String line;
-			while( (line = r.readLine()) != null ) {
-				line = line.trim();
-				if( line.length() == 0 ) continue;
-				if( line.startsWith("#") ) continue;
-				String[] partz = line.split("\t");
-				
-				String file = null;
-				String tags = null;
-				for( int i=0; i<partz.length; ++i ) {
-					String uri = partz[i];
-					if( uri.indexOf(':') == -1 || uri.startsWith("file:")) {
-						file = uri;
-					} else if( uri.startsWith("x-metadata:") ) {
-						String md = uri.substring(11);
-						String[] mdParts = md.split(";");
-						for( int j=0; j<mdParts.length; ++j ) {
-							String mdPart = mdParts[j];
-							if( mdPart.startsWith("tags=") ) {
-								tags = (tags == null ? "" : tags + ", ") + UriUtil.uriDecode(mdPart.substring(5));
+			try {
+				String line;
+				while( (line = r.readLine()) != null ) {
+					line = line.trim();
+					if( line.length() == 0 ) continue;
+					if( line.startsWith("#") ) continue;
+					String[] partz = line.split("\t");
+					
+					String file = null;
+					String tags = null;
+					for( int i=0; i<partz.length; ++i ) {
+						String uri = partz[i];
+						if( uri.indexOf(':') == -1 || uri.startsWith("file:")) {
+							file = uri;
+						} else if( uri.startsWith("x-metadata:") ) {
+							String md = uri.substring(11);
+							String[] mdParts = md.split(";");
+							for( int j=0; j<mdParts.length; ++j ) {
+								String mdPart = mdParts[j];
+								if( mdPart.startsWith("tags=") ) {
+									tags = (tags == null ? "" : tags + ", ") + UriUtil.uriDecode(mdPart.substring(5));
+								}
 							}
 						}
 					}
+					if( file != null && tags != null ) {
+						String ft = (String)fileTags.get(file);
+						fileTags.put(file, ft == null ? tags : ft + ", " + tags );
+					}
 				}
-				if( file != null && tags != null ) {
-					String ft = (String)fileTags.get(file);
-					fileTags.put(file, ft == null ? tags : ft + ", " + tags );
-				}
+				return fileTags;
+			} finally {
+				r.close();
 			}
-			return fileTags;
 		} catch( IOException e1 ) {
 			throw new RuntimeException(e1);
 		}
