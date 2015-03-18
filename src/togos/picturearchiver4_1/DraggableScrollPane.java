@@ -13,7 +13,10 @@ import java.awt.event.MouseMotionListener;
 
 import javax.swing.JScrollPane;
 
-class DraggableScrollPane extends JScrollPane {
+class DraggableScrollPane extends JScrollPane
+{
+	private static final long serialVersionUID = 1L;
+	
 	abstract class MouseDragHelper implements MouseListener, MouseMotionListener {
 		Component cursorComponent;
 		public MouseDragHelper( Component cursorComponent ) {

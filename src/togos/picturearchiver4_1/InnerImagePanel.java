@@ -13,7 +13,10 @@ import javax.swing.JPanel;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 
-class InnerImagePanel extends JPanel implements Scrollable {
+class InnerImagePanel extends JPanel implements Scrollable
+{
+	private static final long serialVersionUID = 1L;
+	
 	protected Image image;
 	protected float scale;
 	

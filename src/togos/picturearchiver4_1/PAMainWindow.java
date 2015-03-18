@@ -47,8 +47,13 @@ import togos.picturearchiver4_1.util.Linker;
 import togos.picturearchiver4_1.util.PathUtil;
 import togos.picturearchiver4_1.util.UriUtil;
 
-public class PAMainWindow extends JFrame implements ResourceUpdateListener {
+public class PAMainWindow extends JFrame implements ResourceUpdateListener
+{
+	private static final long serialVersionUID = 1L;
+
 	class ImagePanel extends DraggableScrollPane {
+		private static final long serialVersionUID = 1L;
+		
 		InnerImagePanel innerPanel;
 		float scale = 1.0f;
 		
