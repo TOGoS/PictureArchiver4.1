@@ -2,6 +2,8 @@
 package togos.picturearchiver4_1.util;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 public abstract class Linker
@@ -35,6 +37,55 @@ public abstract class Linker
 				throw new LinkException( link, target, e );
 			} catch( IOException e ) {
 				throw new LinkException( link, target, e );
+			}
+		}
+	}
+	
+	public static class CopyLinker extends Linker {
+		public void link(File source, File dest) {
+			try {
+				String tmpPrefix = ".tmp-";
+				String tmpSuffix = source.getName();
+				File destDir = dest.getParentFile();
+				if( destDir == null ) destDir = new File("."); // Or something
+				File tempFile = File.createTempFile(tmpPrefix, tmpSuffix, destDir);
+				long size = source.length();
+				FileInputStream fis = new FileInputStream(source);
+				try {
+					FileOutputStream fos = new FileOutputStream(tempFile);
+					long bytesWritten = 0;
+					try {
+						int r;
+						byte[] buffer = new byte[1024*1024];
+						while( (r = fis.read(buffer)) > 0 ) {
+							fos.write(buffer, 0, r);
+							bytesWritten += r;
+						}
+					} finally {
+						fos.close();
+					}
+					if( bytesWritten != size ) {
+						throw new LinkException(dest, source, "Only wrote "+bytesWritten+" of expected "+size+" bytes to "+tempFile);
+					}
+					long tempSize = tempFile.length();
+					if( tempSize != size ) {
+						throw new LinkException(dest, source, tempFile+" seems to be the wrogn size: "+tempSize+"/"+size+" bytes");
+					}
+					// Fix metadata...
+					tempFile.setLastModified(source.lastModified());
+					tempFile.setReadOnly();
+					if( !tempFile.renameTo(dest) ) {
+						throw new LinkException(dest, source, "Failed to rename "+tempFile+" to "+dest);
+					}
+					if( !dest.exists() ) {
+						throw new LinkException(dest, source, dest+" does not exist after renaming "+tempFile+" to it");
+					}
+				} finally {
+					fis.close();
+					tempFile.delete();
+				}
+			} catch( IOException e ) {
+				throw new LinkException(dest, source, e);
 			}
 		}
 	}

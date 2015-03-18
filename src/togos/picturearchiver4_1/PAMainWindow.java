@@ -669,7 +669,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		"  -noborder\n" +
 		"  -maximize\n" +
 		"  -fullscreen\n" +
-		"  -linker {fsutil|ln}\n" +
+		"  -linker {fsutil|ln|copy}\n" +
 		"  -disable-touching ; don't try to update directory timestamps or delete\n" +
 		"                    ; .ccouch-uri files when moving/deleting files.\n" +
 		"  -archive-map <input dir> <archive dir>";
@@ -708,6 +708,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 				String linkerName = args[i];
 				if( "ln".equals(linkerName) ) {
 					Linker.instance = new Linker.LnLinker();
+				} else if( "copy".equals(linkerName) ) {
+					Linker.instance = new Linker.CopyLinker();
 				} else if( "fsutil".equals(linkerName) ) {
 					Linker.instance = new Linker.FSUtilLinker();
 				} else {
