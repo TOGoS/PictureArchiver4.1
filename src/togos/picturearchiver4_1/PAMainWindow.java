@@ -813,6 +813,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 					cmd = "/pa4/ui/zoomIn";
 				} else if( "-".equals(line) || "zoom-out".equals(line) ) {
 					cmd = "/pa4/ui/zoomOut";
+				} else if( "q".equals(line) ) {
+					System.exit(0);
 				} else {
 					cmd = "/pa4/ui/"+line;
 				}
