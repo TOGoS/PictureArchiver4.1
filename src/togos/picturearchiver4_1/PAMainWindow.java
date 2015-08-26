@@ -15,7 +15,10 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -669,6 +672,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		"  -noborder\n" +
 		"  -maximize\n" +
 		"  -fullscreen\n" +
+		"  -cmdline ; read commands from stdin\n"+
 		"  -linker {fsutil|ln|copy}\n" +
 		"  -disable-touching ; don't try to update directory timestamps or delete\n" +
 		"                    ; .ccouch-uri files when moving/deleting files.\n" +
@@ -682,10 +686,13 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		boolean inputsSpecified = false;
 		HashMap archiveDirectoryUriMap = new HashMap();
 		boolean disableTouching = false;
+		boolean cmdline = false;
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
 			if( "-noborder".equals(arg) ) {
 				undecorate = true;
+			} else if( "-cmdline".equals(arg) ) {
+				cmdline = true;
 			} else if( "-maximize".equals(arg) ) {
 				maximize = true;
 			} else if( "-fullscreen".equals(arg) ) {
@@ -773,5 +780,48 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		pam.setRootImageUriList(rootUriList);
 		StatusLog.log("Go to index 0...");
 		pam.goToIndex(0);
+		
+		if( !cmdline ) return;
+		
+		try {
+			String line;
+			BufferedReader lineReader = new BufferedReader(new InputStreamReader(System.in));
+			while( (line = lineReader.readLine()) != null ) {
+				line.trim();
+				if( line.startsWith("#") || line.length() == 0 ) continue;
+				
+				String cmd;
+				if( "n".equals(line) ) {
+					cmd = "/pa4/ui/goToNext";
+				} else if( "p".equals(line) ) {
+					cmd = "/pa4/ui/goToPrevious";
+				} else if( "first".equals(line) ) {
+					cmd = "/pa4/ui/goToFirst";
+				} else if( "last".equals(line) ) {
+					cmd = "/pa4/ui/goToLast";
+				} else if( "a".equals(line) || "archive".equals(line) ) {
+					cmd = "/pa4/ui/toggleCurrentArchived";
+				} else if( "d".equals(line) || "delete".equals(line) ) {
+					cmd = "/pa4/ui/toggleCurrentDeleted";
+				} else if( "l".equals(line) || "left".equals(line) ) {
+					cmd = "/pa4/ui/rotateCurrentLeft";
+				} else if( "r".equals(line) || "right".equals(line) ) {
+					cmd = "/pa4/ui/rotateCurrentRight";
+				} else if( "o".equals(line) || "revert".equals(line) ) {
+					cmd = "/pa4/ui/restoreCurrentOriginal";
+				} else if( "+".equals(line) || "zoom-in".equals(line) ) {
+					cmd = "/pa4/ui/zoomIn";
+				} else if( "-".equals(line) || "zoom-out".equals(line) ) {
+					cmd = "/pa4/ui/zoomOut";
+				} else {
+					cmd = "/pa4/ui/"+line;
+				}
+				
+				pam.doCommand(cmd);
+			}
+		} catch( IOException e ) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 }
