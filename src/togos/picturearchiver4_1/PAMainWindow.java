@@ -110,6 +110,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	JPanel     pzPanel;
 	JLabel       positionLabel;
 	JLabel       zoomLabel;
+	JLabel       fileSizeLabel;
 	JPanel   tagsPanel;
 	JLabel     tagsLabelLabel;
 	JTextField tagsInput;
@@ -243,7 +244,10 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		
 		zoomLabel = new JLabel("");
 		zoomLabel.setForeground(Color.LIGHT_GRAY);
-		
+
+		fileSizeLabel = new JLabel("");
+		fileSizeLabel.setForeground(Color.GRAY);
+
 		statusLabelLabel = new JLabel(" Status: ");
 		statusLabelLabel.setVisible(false);
 		statusLabelLabel.setOpaque(true);
@@ -301,6 +305,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		
 		pzPanel.add(positionLabel);
 		pzPanel.add(zoomLabel);
+		pzPanel.add(fileSizeLabel);
 		titlePanel.add(titleLabel, BorderLayout.CENTER);
 		titlePanel.add(pzPanel, BorderLayout.EAST);
 		statusSubPanel.add(archivedLabel);
@@ -434,6 +439,16 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	protected void setCurrentTags( String tags ) {
 		tagsInput.setText(tags.trim());
 	}
+
+	public String formatNumber(long n) {
+		String s = String.valueOf(n);
+		String f = "";
+		for( int i=0; i<s.length(); ++i ) {
+			if( i % 3 == 0 && f.length() > 0 ) f = "_" + f;
+			f = s.charAt(s.length()-i-1) + f;
+		}
+		return f;
+	}
 	
 	public void updateLabels( State s ) {
 		Map metadata = s.metadata;
@@ -456,6 +471,9 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		} else {
 			positionLabel.setText("");
 		}
+
+		Long fileSize = (Long)metadata.get(ImageManager.FILESIZE);
+		fileSizeLabel.setText(fileSize == null ? "N/A" : formatNumber(fileSize.longValue())+" bytes");
 		
 		statusLabelLabel.setVisible(true);
 		deletedLabel.setVisible(false);

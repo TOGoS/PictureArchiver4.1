@@ -42,6 +42,7 @@ public class ImageManager
 	public static final String ISDELETED = NS + "isDeleted";
 	public static final String ISMODIFIEDFROMORIGINAL = NS + "isModifiedFromOriginal";
 	public static final String SUBJECTTAGS = NS + "subjectTags";
+	public static final String FILESIZE = "http://bitzi.com/xmlns/2002/01/bz-core#fileLength";
 	
 	static class FoundResource {
 		public FoundResource( String uri, Object content ) {
@@ -301,6 +302,10 @@ public class ImageManager
 		metadata.put(ISARCHIVED, Boolean.valueOf(isArchived(fakeUri)));
 		metadata.put(ISMODIFIEDFROMORIGINAL, Boolean.valueOf(isModified(fakeUri)));
 		metadata.put(SUBJECTTAGS, loadTags(fakeUri) );
+
+		File f = getFile(fakeUri, false);
+		if( f != null ) metadata.put(FILESIZE, Long.valueOf(f.length()));
+		
 		return metadata;
 	}
 	
