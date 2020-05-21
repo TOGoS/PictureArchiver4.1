@@ -189,6 +189,16 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 				rotateCurrentLeft(); return true;
 			}
 		});
+		requestSender.putHandler("flipHorizontal", new BaseCommandHandler() {
+			public boolean _call(Request command) {
+				flipCurrentHorizontal(); return true;
+			}
+		});
+		requestSender.putHandler("flipVertical", new BaseCommandHandler() {
+			public boolean _call(Request command) {
+				flipCurrentVertical(); return true;
+			}
+		});
 		requestSender.putHandler("restoreCurrentOriginal", new BaseCommandHandler() {
 			public boolean _call(Request command) {
 				restoreCurrentOriginal(); return true;
@@ -323,6 +333,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		kci.addBinding(KeyEvent.VK_O, "/pa4/ui/restoreCurrentOriginal");
 		kci.addBinding(KeyEvent.VK_R, "/pa4/ui/rotateCurrentRight");
 		kci.addBinding(KeyEvent.VK_L, "/pa4/ui/rotateCurrentLeft");
+		kci.addBinding(KeyEvent.VK_H, "/pa4/ui/flipHorizontal");
+		kci.addBinding(KeyEvent.VK_V, "/pa4/ui/flipVertical");
 		kci.addBinding(KeyEvent.VK_A, "/pa4/ui/toggleCurrentArchived");
 		kci.addBinding(KeyEvent.VK_T, "/pa4/ui/editTags");
 		kci.addBinding(KeyEvent.VK_ENTER, "/pa4/ui/editTags");
@@ -401,6 +413,12 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	}
 	public void rotateCurrentLeft() {
 		imageManager.rotateLeft(state.fakeUri);
+	}
+	public void flipCurrentHorizontal() {
+		imageManager.flipHorizontal(state.fakeUri);
+	}
+	public void flipCurrentVertical() {
+		imageManager.flipVertical(state.fakeUri);
 	}
 	public void restoreCurrentOriginal() {
 		imageManager.restoreOriginal(state.fakeUri);
@@ -807,6 +825,10 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 					cmd = "/pa4/ui/rotateCurrentLeft";
 				} else if( "r".equals(line) || "right".equals(line) ) {
 					cmd = "/pa4/ui/rotateCurrentRight";
+				} else if( "h".equals(line) || "flip-horizontal".equals(line) ) {
+					cmd = "/pa4/ui/flipHorizontal";
+				} else if( "v".equals(line) || "flip-vertical".equals(line) ) {
+					cmd = "/pa4/ui/flipVertical";
 				} else if( "o".equals(line) || "revert".equals(line) ) {
 					cmd = "/pa4/ui/restoreCurrentOriginal";
 				} else if( "+".equals(line) || "zoom-in".equals(line) ) {

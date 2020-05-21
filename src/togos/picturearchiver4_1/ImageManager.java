@@ -26,6 +26,16 @@ import togos.picturearchiver4_1.util.UriUtil;
 
 public class ImageManager
 {
+	enum FlipDirection {
+		HORIZONTAL("horizontal"),
+		VERTICAL("vertical");
+
+		public final String jpegTranName;
+		FlipDirection(String jpegTranName) {
+			this.jpegTranName = jpegTranName;
+		}
+	}
+	
 	public static final String NS = "http://ns.nuke24.net/PictureArchiver4.1/";
 	public static final String DOESNOTEXIST = NS + "doesNotExist";
 	public static final String ISARCHIVED = NS + "isArchived";
@@ -410,6 +420,15 @@ public class ImageManager
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
+	public void jpegtranFlip(String fakeUri, FlipDirection direction) {
+		File src = getBackedUpSource(fakeUri,true);
+		File dest = getFile(fakeUri,true);
+		sys(new String[]{"jpegtran","-flip",String.valueOf(direction.jpegTranName),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
+		dest.setLastModified(src.lastModified());
+		fileUpdated(dest);
+		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
+	}
+	
 	public void rotateRight(String fakeUri) {
 		jpegtranRotate(fakeUri, 90);
 	}
@@ -417,7 +436,15 @@ public class ImageManager
 	public void rotateLeft(String fakeUri) {
 		jpegtranRotate(fakeUri, 270);
 	}
+
+	public void flipHorizontal(String fakeUri) {
+		jpegtranFlip(fakeUri, FlipDirection.HORIZONTAL);
+	}
 	
+	public void flipVertical(String fakeUri) {
+		jpegtranFlip(fakeUri, FlipDirection.VERTICAL);
+	}
+
 	public void restoreOriginal(String fakeUri) {
 		File originalFile = getFile(munge(fakeUri,".originals"),true);
 		File normalFile = getFile(fakeUri,true);
