@@ -235,8 +235,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		ip.setPreferredSize(new Dimension(512,384));
 		mainPanel.add(ip, BorderLayout.CENTER);
 		
-		titleLabel = new JLabel("", JLabel.LEADING);
-		titleLabel.setHorizontalTextPosition(JLabel.TRAILING);
+		titleLabel = new JLabel("");
 		titleLabel.setForeground(Color.WHITE);
 		
 		positionLabel = new JLabel("");
@@ -458,6 +457,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 			zoomLabel.setText("");
 		} else {
 			String title = UriUtil.uriDecode(fakeUri);
+			// There's no good built-in way to cut the text's left end with ellipses.
+			// https://stackoverflow.com/questions/19519940/putting-3-dots-at-the-beginning-of-jlabel
 			// Do some guessing about how many chars can fit:
 			int maxTitleLength = titleLabel.getWidth() / 8;
 			if( title.length() > maxTitleLength ) {
