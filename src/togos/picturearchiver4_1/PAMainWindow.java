@@ -109,6 +109,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	JLabel     titleLabel;
 	JPanel     pzPanel;
 	JLabel       positionLabel;
+	JLabel       dimensionsLabel;
 	JLabel       zoomLabel;
 	JLabel       fileSizeLabel;
 	JPanel   tagsPanel;
@@ -240,13 +241,16 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		
 		positionLabel = new JLabel("");
 		positionLabel.setForeground(Color.GRAY);
-		
+
+		dimensionsLabel = new JLabel("");
+		dimensionsLabel.setForeground(Color.LIGHT_GRAY);
+
 		zoomLabel = new JLabel("");
-		zoomLabel.setForeground(Color.LIGHT_GRAY);
+		zoomLabel.setForeground(Color.GRAY);
 
 		fileSizeLabel = new JLabel("");
-		fileSizeLabel.setForeground(Color.GRAY);
-
+		fileSizeLabel.setForeground(Color.LIGHT_GRAY);
+		
 		statusLabelLabel = new JLabel(" Status: ");
 		statusLabelLabel.setVisible(false);
 		statusLabelLabel.setOpaque(true);
@@ -260,11 +264,11 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		deletedLabel = new JLabel("Deleted");
 		deletedLabel.setVisible(false);
 		deletedLabel.setForeground(Color.RED);
-
+		
 		modifiedLabel = new JLabel("Modified");
 		modifiedLabel.setVisible(false);
 		modifiedLabel.setForeground(Color.GREEN);
-
+		
 		doesNotExistLabel = new JLabel("Not Found");
 		doesNotExistLabel.setVisible(false);
 		doesNotExistLabel.setForeground(Color.ORANGE);
@@ -303,6 +307,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		textPanel.setOpaque(false);
 		
 		pzPanel.add(positionLabel);
+		pzPanel.add(dimensionsLabel);
 		pzPanel.add(zoomLabel);
 		pzPanel.add(fileSizeLabel);
 		titlePanel.add(titleLabel, BorderLayout.CENTER);
@@ -448,6 +453,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		}
 		return f;
 	}
+
+	static final String TIMES = String.valueOf((char)0xD7);
 	
 	public void updateLabels( State s ) {
 		Map metadata = s.metadata;
@@ -472,6 +479,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		} else {
 			positionLabel.setText("");
 		}
+
+		dimensionsLabel.setText(s.image != null ? s.image.getWidth(null)+TIMES+s.image.getHeight(null) : "N/A");
 
 		Long fileSize = (Long)metadata.get(ImageManager.FILESIZE);
 		fileSizeLabel.setText(fileSize == null ? "N/A" : formatNumber(fileSize.longValue())+" bytes");
