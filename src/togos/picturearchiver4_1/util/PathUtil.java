@@ -157,7 +157,9 @@ public class PathUtil {
 	public static String maybeNormalizeFileUri( String uriOrPath ) {
 		if( uriOrPath.startsWith("//") ) return "file:" + uriEscapePath(uriOrPath.replace('\\','/'));
 		if( uriOrPath.startsWith("/") ) return "file://" + uriEscapePath(uriOrPath.replace('\\','/'));
-		if( uriOrPath.matches("^[A-Za-z]:.*") ) return "file:///" + uriEscapePath(uriOrPath.replace('\\','/')); 
+		if( uriOrPath.matches("^[A-Za-z]:.*") ) {
+			return "file:///" + uriOrPath.substring(0,1).toUpperCase() + uriEscapePath(uriOrPath.substring(1).replace('\\','/'));
+		}
 		if( isUri(uriOrPath) ) return uriOrPath;
 		return "file:" + uriEscapePath(uriOrPath.replace('\\','/'));
 	}

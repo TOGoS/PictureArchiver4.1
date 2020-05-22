@@ -18,14 +18,12 @@ import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
 
-import togos.picturearchiver4_1.util.FileUtil;
-import togos.picturearchiver4_1.util.Linker;
-import togos.picturearchiver4_1.util.PathUtil;
-import togos.picturearchiver4_1.util.UriUtil;
-
+import togos.picturearchiver4_1.util.*;
 
 public class ImageManager
 {
+	ImageCompressor imageCompressor = new ImageCompressor(ImageCompressor.STANDARD_COMPRESSION_LEVELS);
+	
 	enum FlipDirection {
 		HORIZONTAL("horizontal"),
 		VERTICAL("vertical");
@@ -102,7 +100,7 @@ public class ImageManager
 		String path = getFilePath(uri, errorOnNonFileUri);
 		return path == null ? null : new File(path);
 	}
-
+	
 	public static String getFileUri( String path ) {
 		return PathUtil.maybeNormalizeFileUri(path);
 	}
@@ -116,10 +114,11 @@ public class ImageManager
 		return getFile(uri, true).exists();
 	}
 	
-	public static String munge( String uri, String insert ) {
+	/** foo/a.jpg -> foo/subDir/a.jpg */
+	public static String munge( String uri, String subDir ) {
 		int ls = uri.lastIndexOf('/');
 		if( ls != -1 ) {
-			return uri.substring(0,ls) + "/" + insert + "/" + uri.substring(ls+1);
+			return uri.substring(0,ls) + "/" + subDir + "/" + uri.substring(ls+1);
 		}
 		return null;
 	}
@@ -147,33 +146,12 @@ public class ImageManager
 		return null;
 	}
 	
-	protected static void move( File src, File dest ) {
+	protected static void move(File src, File dest ) {
 		if( src.getAbsolutePath().equals(dest.getAbsolutePath()) ) return;
 		FileUtil.mkParentDirs(dest);
-		src.renameTo(dest);
-	}
-
-	protected static String join( String[] parts, String sep ) {
-		String res = "";
-		for( int i=0; i<parts.length; ++i ) {
-			res += parts[i];
-			if( i<parts.length-1 ) res += sep;
+		if (!src.renameTo(dest)) {
+			throw new RuntimeException("Failed to move "+src+" to "+dest);
 		}
-		return res;
-	}
-	
-	protected static void sys( String[] argv ) {
-		Process lnProc;
-		try {
-			lnProc = Runtime.getRuntime().exec(argv);
-			int lnProcReturn = lnProc.waitFor();
-			if( lnProcReturn != 0 ) {
-				throw new RuntimeException("External program returned " + lnProcReturn + ": " + join(argv," "));
-			}
-		} catch( Exception e) {
-			throw new RuntimeException("Exception while running " + join(argv," "), e);
-		}
-
 	}
 	
 	public HashMap archiveDirectoryUriMap = new HashMap();
@@ -310,18 +288,26 @@ public class ImageManager
 	}
 	
 	//
-
+	
+	protected void resourceUpdated( BaseResourceUpdateEvent evt ) {
+		for( Iterator i=resourceUpdateListeners.iterator(); i.hasNext(); ) {
+			((ResourceUpdateListener)i.next()).resourceUpdated(evt);
+		}
+	}
+	
 	protected void resourceUpdated( String fakeUri, boolean originalUpdated, String key, Object value ) {
 		HashMap newMetadata = new HashMap();
 		newMetadata.put(key,value);
-		BaseResourceUpdateEvent evt = new BaseResourceUpdateEvent( fakeUri, originalUpdated, newMetadata );
-		for( Iterator i=resourceUpdateListeners.iterator(); i.hasNext(); ) {
-			((ResourceUpdateListener)i.next()).resourceUdated(evt);
-		}
+		resourceUpdated(new BaseResourceUpdateEvent( fakeUri, originalUpdated, newMetadata ));
 	}
 
 	protected void resourceUpdated( String fakeUri, String key, Object value ) {
 		resourceUpdated(fakeUri, false, key, value);
+	}
+	
+	/** Updated in unspecified ways.  Reload the whole thing. */
+	protected void resourceUpdated( String fakeUri ) {
+		resourceUpdated(new BaseResourceUpdateEvent(fakeUri, true, loadMetadata(fakeUri)));
 	}
 	
 	protected void directoryUpdated( File dir ) {
@@ -391,7 +377,11 @@ public class ImageManager
 		resourceUpdated(fakeUri, ISARCHIVED, Boolean.TRUE);
 	}
 	
-	protected File getBackedUpSource(String fakeUri, boolean errorOnNotFound) {
+	/**
+	 * Ensure the file is backed up to .originals.
+	 * @return the current version if it exists, otherwise the original
+	 */
+	protected File getBackedUpSource(String fakeUri) {
 		File normalFile = getFile(findRealUri(fakeUri),true);
 		File originalFile = getFile(munge(fakeUri,".originals"),true);
 		if( normalFile.exists() && originalFile.exists() ) {
@@ -401,10 +391,23 @@ public class ImageManager
 			return originalFile;
 		} else if( !normalFile.exists() && originalFile.exists() ) {
 			return originalFile;
-		} else if( errorOnNotFound ) {
-			throw new RuntimeException("Can't find backed-up original file: " + fakeUri);
 		} else {
-			return null;
+			throw new RuntimeException("Can't find backed-up original file: " + fakeUri);
+		}
+	}
+	
+	/** Return an uncompressed version.  For now this always returns the original.
+	 * Which means you need to do rotations, etc *after* compressing. */
+	protected File getUncompressedSource(String fakeUri) {
+		File normalFile = getFile(findRealUri(fakeUri),true);
+		File originalFile = getFile(munge(fakeUri,".originals"),true);
+		if( originalFile.exists() ) {
+			return originalFile;
+		} else if( normalFile.exists() && !originalFile.exists() ) {
+			move( normalFile, originalFile );
+			return originalFile;
+		} else {
+			throw new RuntimeException("Can't find backed-up original file: " + fakeUri);
 		}
 	}
 
@@ -417,18 +420,26 @@ public class ImageManager
 	}
 	
 	public void jpegtranRotate(String fakeUri, int degrees) {
-		File src = getBackedUpSource(fakeUri,true);
+		File src = getBackedUpSource(fakeUri);
 		File dest = getFile(fakeUri,true);
-		sys(new String[]{"jpegtran","-rotate",String.valueOf(degrees),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
+		try {
+			SystemUtil.runCommand(new String[]{"jpegtran","-rotate",String.valueOf(degrees),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
+		} catch( SystemUtil.ShellCommandError e ) {
+			throw new RuntimeException(e);
+		}
 		dest.setLastModified(src.lastModified());
 		fileUpdated(dest);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
 	public void jpegtranFlip(String fakeUri, FlipDirection direction) {
-		File src = getBackedUpSource(fakeUri,true);
+		File src = getBackedUpSource(fakeUri);
 		File dest = getFile(fakeUri,true);
-		sys(new String[]{"jpegtran","-flip",String.valueOf(direction.jpegTranName),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
+		try {
+			SystemUtil.runCommand(new String[]{"jpegtran", "-flip", String.valueOf(direction.jpegTranName), "-outfile", dest.getAbsolutePath(), src.getAbsolutePath()});
+		} catch( SystemUtil.ShellCommandError e ) {
+			throw new RuntimeException(e);
+		}
 		dest.setLastModified(src.lastModified());
 		fileUpdated(dest);
 		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
@@ -449,7 +460,40 @@ public class ImageManager
 	public void flipVertical(String fakeUri) {
 		jpegtranFlip(fakeUri, FlipDirection.VERTICAL);
 	}
+	
+	public void compressAgain(String fakeUri) {
+		File src = getUncompressedSource(fakeUri);
+		File dest = getFile(fakeUri,true);
 
+		try {
+			imageCompressor.compressAgaion(src, dest);
+			fileUpdated(dest);
+			resourceUpdated(fakeUri);
+		} catch( ImageCompressor.CompressionError e ) {
+			restoreOriginal(fakeUri);
+			throw new RuntimeException(e);
+		} catch( ImageCompressor.CouldNotCompressFurther e ) {
+			System.err.println("Could not compress further");
+		}
+	}
+	
+	public void compressToUnder(String fakeUri, long targetSize) {
+		File src = getUncompressedSource(fakeUri);
+		File dest = getFile(fakeUri,true);
+		
+		try {
+			imageCompressor.compressToUnder(src, dest, targetSize);
+			fileUpdated(dest);
+			resourceUpdated(fakeUri);
+		} catch( ImageCompressor.CompressionError e ) {
+			restoreOriginal(fakeUri);
+			throw new RuntimeException(e);
+		} catch( ImageCompressor.CouldNotCompressFurther e ) {
+			System.err.println("Could not compress further");
+		}
+	}
+	
+	
 	public void restoreOriginal(String fakeUri) {
 		File originalFile = getFile(munge(fakeUri,".originals"),true);
 		File normalFile = getFile(fakeUri,true);

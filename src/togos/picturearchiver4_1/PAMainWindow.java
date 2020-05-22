@@ -201,6 +201,16 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 				flipCurrentVertical(); return true;
 			}
 		});
+		requestSender.putHandler("quickCompress", new BaseCommandHandler() {
+			public boolean _call(Request command) {
+				quickCompress(); return true;
+			}
+		});
+		requestSender.putHandler("compress", new BaseCommandHandler() {
+			public boolean _call(Request command) {
+				compress(); return true;
+			}
+		});
 		requestSender.putHandler("restoreCurrentOriginal", new BaseCommandHandler() {
 			public boolean _call(Request command) {
 				restoreCurrentOriginal(); return true;
@@ -330,8 +340,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		
 		kci.addBinding(KeyEvent.VK_LEFT, "/pa4/ui/goToPrevious");
 		kci.addBinding(KeyEvent.VK_RIGHT, "/pa4/ui/goToNext");
-		kci.addBinding(KeyEvent.VK_PAGE_DOWN, "/pa4/ui/goToDelta", new Integer(10));
-		kci.addBinding(KeyEvent.VK_PAGE_UP, "/pa4/ui/goToDelta", new Integer(-10));
+		kci.addBinding(KeyEvent.VK_PAGE_DOWN, "/pa4/ui/goToDelta", Integer.valueOf(10));
+		kci.addBinding(KeyEvent.VK_PAGE_UP, "/pa4/ui/goToDelta", Integer.valueOf(-10));
 		kci.addBinding(KeyEvent.VK_RIGHT, "/pa4/ui/goToNext");
 		kci.addBinding(KeyEvent.VK_HOME, "/pa4/ui/goToFirst");
 		kci.addBinding(KeyEvent.VK_END, "/pa4/ui/goToLast");
@@ -339,6 +349,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		kci.addBinding(KeyEvent.VK_PLUS, "/pa4/ui/zoomIn");
 		kci.addBinding(KeyEvent.VK_MINUS, "/pa4/ui/zoomOut");
 		kci.addBinding(KeyEvent.VK_DELETE, "/pa4/ui/toggleCurrentDeleted");
+		kci.addBinding(KeyEvent.VK_K, "/pa4/ui/quickCompress");
+		kci.addBinding(KeyEvent.VK_C, "/pa4/ui/compress");
 		kci.addBinding(KeyEvent.VK_O, "/pa4/ui/restoreCurrentOriginal");
 		kci.addBinding(KeyEvent.VK_R, "/pa4/ui/rotateCurrentRight");
 		kci.addBinding(KeyEvent.VK_L, "/pa4/ui/rotateCurrentLeft");
@@ -435,6 +447,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	public void saveCurrentTags() {
 		imageManager.saveTags(state.fakeUri, getCurrentTags());
 	}
+	public void quickCompress() { imageManager.compressToUnder(state.fakeUri, 300000); }
+	public void compress() { imageManager.compressAgain(state.fakeUri); }
 	
 	protected String getCurrentTags() {
 		return tagsInput.getText().trim();
@@ -704,11 +718,13 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		collectImageUris( file, uriList );
 	}
 	
-	public void resourceUdated(ResourceUpdateEvent evt) {
+	@Override
+	public void resourceUpdated(ResourceUpdateEvent evt) {
 		if( !evt.getResourceUri().equals(this.state.fakeUri) ) return;
 		
-		this.state.metadata.putAll(evt.getChangedMetadata());
-		refresh(false);
+		//this.state.metadata.putAll(evt.getChangedMetadata());
+		//refresh(false);
+		refresh(true);
 	}
 	
 	public static String USAGE =
@@ -857,6 +873,10 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 					cmd = "/pa4/ui/flipHorizontal";
 				} else if( "v".equals(line) || "flip-vertical".equals(line) ) {
 					cmd = "/pa4/ui/flipVertical";
+				} else if( "c".equals(line) || "compress".equals(line) ) {
+					cmd = "/pa4/ui/compress";
+				} else if( "k".equals(line) || "quickCompress".equals(line) ) {
+					cmd = "/pa4/ui/quickCompress";
 				} else if( "o".equals(line) || "revert".equals(line) ) {
 					cmd = "/pa4/ui/restoreCurrentOriginal";
 				} else if( "+".equals(line) || "zoom-in".equals(line) ) {
