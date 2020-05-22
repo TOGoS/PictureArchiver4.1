@@ -95,7 +95,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		String fakeUri;
 		String realUri;
 		Image image;
-		Map metadata;
+		Map<String,?> metadata;
 		float scale;
 	}
 	

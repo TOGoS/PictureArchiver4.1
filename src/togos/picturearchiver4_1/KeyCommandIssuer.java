@@ -14,7 +14,7 @@ import togos.mf.base.BaseRequest;
 
 public class KeyCommandIssuer implements KeyListener {
 	public Callable commandHandler;
-	public HashMap keyBindings = new HashMap();
+	public HashMap<Integer,Request> keyBindings = new HashMap();
 	
 	public KeyCommandIssuer( Callable commandHandler ) {
 		this.commandHandler = commandHandler;
@@ -22,12 +22,12 @@ public class KeyCommandIssuer implements KeyListener {
 	
 	public void addBinding( int keyCode, String uri ) {
 		BaseRequest req = new BaseRequest(RequestVerbs.POST, uri);
-		keyBindings.put( new Integer(keyCode), req );
+		keyBindings.put( Integer.valueOf(keyCode), req );
 	}
 
 	public void addBinding( int keyCode, String uri, Object arg ) {
 		BaseRequest req = new BaseRequest(RequestVerbs.POST, uri, BaseArguments.single(arg), Collections.EMPTY_MAP );
-		keyBindings.put( new Integer(keyCode), req );
+		keyBindings.put( Integer.valueOf(keyCode), req );
 	}
 
 	public void keyPressed(KeyEvent e) {
