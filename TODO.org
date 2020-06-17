@@ -1,0 +1,26 @@
+*** TODO Non-destructive modifications
+
+Store a list of modifications (rotations, compression, etc)
+so that additional modifications can be performed as losslessly as possible.
+e.g. rotate-right,rotate-right,rotate-right,rotate-right,compress,compress,compress
+is the same as just compressing to the third compression level.
+
+This could replace the more special-purpose and hackey remembering of the current compression level.
+
+*** TODO Option to publish/copy URN of picture to clipboard
+
+*** TODO Write documentation
+
+Otherwise I'm going to forget how my own program works lol
+
+e.g. how does -archive-map work
+
+*** TODO Show files in archive-mapped directories
+
+These should be read-only; don't allow modifications.  Maybe allow deleting, though?
+
+Maybe have 'archived' grayed out (instead of yellow) to indicate it's not changeable.
+
+*** TODO Loud indicator for very large images
+
+Maybe a bright red border or something.
