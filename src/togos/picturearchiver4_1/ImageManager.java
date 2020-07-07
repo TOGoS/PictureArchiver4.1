@@ -436,6 +436,7 @@ public class ImageManager
 		File src = getBackedUpSource(fakeUri);
 		File dest = getFile(fakeUri,true);
 		try {
+			dest.delete(); // JPEGTran may write a new file rather than overwriting, but just to be sure...
 			SystemUtil.runCommand(new String[]{"jpegtran", "-flip", String.valueOf(direction.jpegTranName), "-outfile", dest.getAbsolutePath(), src.getAbsolutePath()});
 		} catch( SystemUtil.ShellCommandError e ) {
 			throw new RuntimeException(e);
