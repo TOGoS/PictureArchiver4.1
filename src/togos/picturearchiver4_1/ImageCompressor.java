@@ -71,6 +71,14 @@ public class ImageCompressor {
 	public CompressionResult compress(File original, File target, CompressionLevel level) throws CompressionError {
 		// 195901-20200520_195901.jpg -interlace Plane -gaussian-blur 0.05 -resize "1536x1536>" -quality 85% 195901-20200520_195901.smaller2.jpg
 		try {
+			if( original.equals(target) ) {
+				throw new RuntimeException("original file == target: "+original);
+			}
+			// Make sure we're writing a new file, not rewriting an existing one!
+			// Might be better to do the write-to-temp-file-then-move trick
+			// so that if this fails, the file hasn't disappeared
+			// (though it *should* be backed up, right?)
+			target.delete();
 			SystemUtil.runCommand(new String[]{
 					  "gm", "convert", original.getPath(),
 					  "-interlace", "Plane",
