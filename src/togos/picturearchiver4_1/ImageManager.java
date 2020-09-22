@@ -344,7 +344,7 @@ public class ImageManager
 		File realFile = getFile(realUri,true);
 		if( realFile.getAbsolutePath().equals(deletedFile.getAbsolutePath()) ) {
 		} else if( realFile.exists() ) {
-			 if( deletedFile.exists() ) deletedFile.delete();
+			if( deletedFile.exists() ) deletedFile.delete();
 			FileUtil.mkParentDirs(deletedFile);
 			realFile.renameTo(deletedFile);
 		}
