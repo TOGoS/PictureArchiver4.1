@@ -158,10 +158,11 @@ public class PathUtil {
 		if( uriOrPath.startsWith("//") ) return "file:" + uriEscapePath(uriOrPath.replace('\\','/'));
 		if( uriOrPath.startsWith("/") ) return "file://" + uriEscapePath(uriOrPath.replace('\\','/'));
 		if( uriOrPath.matches("^[A-Za-z]:.*") ) {
-			return "file:///" + uriOrPath.substring(0,1).toUpperCase() + uriEscapePath(uriOrPath.substring(1).replace('\\','/'));
+			// DOS/Windows path!
+			return "file:///" + uriOrPath.substring(0,1).toUpperCase() + uriEscapePath(uriOrPath.substring(1).replace('\\','/').replaceAll("/+","/"));
 		}
 		if( isUri(uriOrPath) ) return uriOrPath;
-		return "file:" + uriEscapePath(uriOrPath.replace('\\','/'));
+		return "file:" + uriEscapePath(uriOrPath.replace('\\','/').replaceAll("/+","/"));
 	}
 	
 	public static class Path {

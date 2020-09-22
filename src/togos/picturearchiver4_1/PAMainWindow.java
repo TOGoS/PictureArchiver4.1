@@ -762,6 +762,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 			} else if( "-archive-map".equals(arg) ) {
 				String inDir = ImageManager.getFileUri(args[++i]);
 				String outDir = ImageManager.getFileUri(args[++i]);
+				StatusLog.log("Adding normalized mapping: " + inDir + " -> "+outDir);
 				archiveDirectoryUriMap.put(inDir,outDir);
 			} else if( "-disable-touching".equals(arg) ) {
 				disableTouching = true;
