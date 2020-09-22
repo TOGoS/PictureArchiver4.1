@@ -1,4 +1,4 @@
-*** TODO Fix horizontal/vertical flipping
+*** DONE Fix horizontal/vertical flipping
 
 #+BEGIN_EXAMPLE
 Exception while running jpegtran -flip horizontal -outfile F:\incoming\images\TOGoS\photos\2020\06\2020_06_23\204030-20200623_204030.jpg F:\incoming\images\TOGoS\photos\2020\06\2020_06_23\204030-20200623_204030.jpg
@@ -13,7 +13,9 @@ and then do the flip manually from the command-line, and that works!
 
 Seems like this happens after compressing.
 
-Maybe non-destructive modifications would happen to solve this.
+Maybe non-destructive modifications would happen to solve this?
+
+Seems to have been fixed by having jpegtran output to a new, temporary file.
 
 *** TODO Non-destructive modifications
 

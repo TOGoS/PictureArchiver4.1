@@ -410,40 +410,47 @@ public class ImageManager
 			throw new RuntimeException("Can't find backed-up original file: " + fakeUri);
 		}
 	}
-
-	protected File getOriginal(String fakeUri) {
-		File originalFile = getFile(munge(fakeUri,".originals"),true);
-		if( originalFile.exists() ) return originalFile;
-		File realFile = getFile(findRealUri(fakeUri),true);
-		if( realFile.exists() ) return realFile;
-		return null;
+	
+	public void jpegtranInPlace(String fakeUri, String...opArgs) {
+		File src = getBackedUpSource(fakeUri);
+		File dest = getFile(fakeUri,true);
+		// Source and dest may be the same!
+		// So write to a temp file and rename to dest if successful.
+		File temp = getFile(fakeUri+".temp", true);
+		
+		String[] command = new String[3+opArgs.length];
+		command[0] = "jpegtran";
+		for (int j=0; j<opArgs.length; ++j) {
+			command[1+j] = opArgs[j];
+		}
+		command[1+opArgs.length] = src.getAbsolutePath();
+		command[2+opArgs.length] = temp.getAbsolutePath();
+		
+		try {
+			temp.delete(); // JPEGTran may write a new file rather than overwriting, but just to be sure...
+			SystemUtil.runCommand(command);
+			if (!temp.exists()) throw new SystemUtil.ShellCommandError("Destination file "+dest+" does not exist after command: "+SystemUtil.commandString(command));
+			if (temp.length() == 0) throw new SystemUtil.ShellCommandError("Destination file "+dest+" is empty after command: "+SystemUtil.commandString(command));
+			
+			temp.setLastModified(src.lastModified());
+			dest.delete(); // Otherwise renameTo can fail
+			if (!temp.renameTo(dest)) {
+				throw new SystemUtil.ShellCommandError("Failed to move "+temp+" to "+dest);
+			}
+		} catch( SystemUtil.ShellCommandError e ) {
+			temp.delete();
+			throw new RuntimeException(e);
+		}
+		fileUpdated(dest);
+		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
 	}
 	
 	public void jpegtranRotate(String fakeUri, int degrees) {
-		File src = getBackedUpSource(fakeUri);
-		File dest = getFile(fakeUri,true);
-		try {
-			SystemUtil.runCommand(new String[]{"jpegtran","-rotate",String.valueOf(degrees),"-outfile",dest.getAbsolutePath(),src.getAbsolutePath()});
-		} catch( SystemUtil.ShellCommandError e ) {
-			throw new RuntimeException(e);
-		}
-		dest.setLastModified(src.lastModified());
-		fileUpdated(dest);
-		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
+		jpegtranInPlace(fakeUri, "-rotate", String.valueOf(degrees));
 	}
 	
 	public void jpegtranFlip(String fakeUri, FlipDirection direction) {
-		File src = getBackedUpSource(fakeUri);
-		File dest = getFile(fakeUri,true);
-		try {
-			dest.delete(); // JPEGTran may write a new file rather than overwriting, but just to be sure...
-			SystemUtil.runCommand(new String[]{"jpegtran", "-flip", String.valueOf(direction.jpegTranName), "-outfile", dest.getAbsolutePath(), src.getAbsolutePath()});
-		} catch( SystemUtil.ShellCommandError e ) {
-			throw new RuntimeException(e);
-		}
-		dest.setLastModified(src.lastModified());
-		fileUpdated(dest);
-		resourceUpdated(fakeUri, true, ISMODIFIEDFROMORIGINAL, Boolean.TRUE);
+		jpegtranInPlace(fakeUri, "-flip", String.valueOf(direction.jpegTranName));
 	}
 	
 	public void rotateRight(String fakeUri) {
