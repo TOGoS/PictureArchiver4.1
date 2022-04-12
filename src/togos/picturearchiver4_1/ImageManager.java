@@ -22,7 +22,7 @@ import togos.picturearchiver4_1.util.*;
 
 public class ImageManager
 {
-	ImageCompressor imageCompressor = new ImageCompressor(ImageCompressor.STANDARD_COMPRESSION_LEVELS);
+	ImageCompressor imageCompressor;
 	
 	enum FlipDirection {
 		HORIZONTAL("horizontal"),
@@ -152,6 +152,11 @@ public class ImageManager
 		if (!src.renameTo(dest)) {
 			throw new RuntimeException("Failed to move "+src+" to "+dest);
 		}
+	}
+	
+	
+	public ImageManager(ImageCompressor imageCompressor) {
+		this.imageCompressor = imageCompressor;
 	}
 	
 	public HashMap archiveDirectoryUriMap = new HashMap();

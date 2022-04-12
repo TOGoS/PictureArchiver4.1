@@ -61,9 +61,15 @@ public class ImageCompressor {
 	});
 	
 	List<CompressionLevel> compressionLevels;
+	/**
+	 * UmageMagick-like command to use to convert images.
+	 * "gm" or "magick" or whatever, so long as it supports out convert commands.
+	 */
+	String magickExe = null;
 	
-	public ImageCompressor(List<CompressionLevel> compressionLevels) {
+	public ImageCompressor(List<CompressionLevel> compressionLevels, String magickExe) {
 		this.compressionLevels = compressionLevels;
+		this.magickExe = magickExe;
 	}
 	
 	CompressionResult lastCompression;
@@ -79,13 +85,16 @@ public class ImageCompressor {
 			// so that if this fails, the file hasn't disappeared
 			// (though it *should* be backed up, right?)
 			target.delete();
+			if( magickExe == null ) {
+				throw new RuntimeException("Please set ImageCompressor#magickCommand");
+			}
 			SystemUtil.runCommand(new String[]{
-					  "gm", "convert", original.getPath(),
-					  "-interlace", "Plane",
-					  "-gaussian-blur", "0.05",
-					  "-resize", level.maxWidth + "x" + level.maxHeight + ">",
-					  "-quality", String.valueOf(level.quality),
-					  target.getPath()
+				magickExe, "convert", original.getPath(),
+				"-interlace", "Plane",
+				"-gaussian-blur", "0.05",
+				"-resize", level.maxWidth + "x" + level.maxHeight + ">",
+				"-quality", String.valueOf(level.quality),
+				target.getPath()
 			});
 		} catch( SystemUtil.ShellCommandError e ) {
 			throw new CompressionError("Shell command failed", e);

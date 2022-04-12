@@ -53,6 +53,9 @@ import togos.picturearchiver4_1.util.UriUtil;
 public class PAMainWindow extends JFrame implements ResourceUpdateListener
 {
 	private static final long serialVersionUID = 1L;
+	
+	static final String MAGICK_EXE_DEFAULT = "gm";
+	static final String VERSION = "4.1.241";
 
 	class ImagePanel extends DraggableScrollPane {
 		private static final long serialVersionUID = 1L;
@@ -99,7 +102,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		float scale;
 	}
 	
-	ImageManager imageManager = new ImageManager();
+	ImageManager imageManager;
 	MappedCommandHandler requestSender = new MappedCommandHandler("/pa4/ui/");
 	KeyCommandIssuer kci = new KeyCommandIssuer(requestSender);
 
@@ -135,8 +138,10 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		}
 	}
 	
-	public PAMainWindow() {
+	public PAMainWindow(ImageManager imageManager) {
 		super();
+		
+		this.imageManager = imageManager;
 		
 		imageManager.addResourceUpdateListener(this);
 		
@@ -237,7 +242,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 			}
 		});
 		
-		setTitle("PictureArchiver4");
+		setTitle("PictureArchiver "+VERSION);
 		JPanel mainPanel = new JPanel(new BorderLayout());
 		mainPanel.setBackground(Color.BLACK);
 
@@ -683,7 +688,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	protected static boolean looksLikeImagePath( String path ) {
 		path = path.toLowerCase();
 		// TODO: add more image format extensions....
-		return path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg") || path.endsWith(".tiff") || path.endsWith(".tif");
+		return path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".jpeg") || path.endsWith(".tiff") || path.endsWith(".tif") || path.endsWith(".gif");
 	}
 	
 	protected static String getFakePath( String path ) {
@@ -728,17 +733,29 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	}
 	
 	public static String USAGE =
+		"PictureArchiver "+VERSION+"\n" +
+		"\n" +
 		"Usage: pa4 [options] <infile> <infile> <infile> ...\n" +
+		"\n" +
 		"Where <infile> is the path to a file or directory to operate on.\n" +
+		"\n" +
 		"Options:\n" +
 		"  -noborder\n" +
 		"  -maximize\n" +
 		"  -fullscreen\n" +
 		"  -cmdline ; read commands from stdin\n"+
 		"  -linker {fsutil|ln|copy}\n" +
+		"  -magick-exe <path> ; indicate path to executable of gm, magick, or similar\n" +
 		"  -disable-touching ; don't try to update directory timestamps or delete\n" +
 		"                    ; .ccouch-uri files when moving/deleting files.\n" +
-		"  -archive-map <input dir> <archive dir>";
+		"  -archive-map <input dir> <archive dir>\n" +
+		"\n" +
+		"If -magick-exe is not specified, the value of MAGICK_EXE environment variable\n" +
+		"will be used, and if that is not set, we'll default to '"+MAGICK_EXE_DEFAULT+"'.\n" +
+		"\n" +
+		"This calls out to jpegtran and graphicsmagick or imagemagick.  You may want to:\n" +
+		"  choco install jpegtran magick\n" +
+		"or similar installation command for your platform.\n";
 	
 	public static void main(String[] args) {
 		HashSet rootUriSet = new HashSet();
@@ -749,6 +766,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		HashMap archiveDirectoryUriMap = new HashMap();
 		boolean disableTouching = false;
 		boolean cmdline = false;
+		String magickExe = null;
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
 			if( "-noborder".equals(arg) ) {
@@ -785,6 +803,8 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 				} else {
 					throw new RuntimeException("Unrecognised linker: '"+linkerName+"'");
 				}
+			} else if( "-magick-exe".equals(arg) ) {
+				magickExe = args[++i];
 			} else if( "-?".equals(arg) || "-h".equals(arg) || "-help".equals(arg) || "--help".equals(arg) ) {
 				System.out.println(USAGE);
 				System.exit(0);
@@ -799,6 +819,14 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 			System.err.println("No files or directories specified!");
 			System.err.println("Run with -? for usage information.");
 			System.exit(0);
+		}
+		
+		if( magickExe == null ) {
+			magickExe = System.getenv("MAGICK_EXE");
+		}
+		if( magickExe == null ) {
+			magickExe = MAGICK_EXE_DEFAULT;
+			System.err.println("No -magick-exe or $MAGICK_EXE; defaulting to '"+magickExe+"'");
 		}
 		
 		//collectImageUris( uri, uriSet );
@@ -821,8 +849,15 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 			e.printStackTrace();
 		}
 		
+		StatusLog.log("Initializing ImageManager");
+		ImageCompressor imageCompressor = new ImageCompressor(
+			ImageCompressor.STANDARD_COMPRESSION_LEVELS,
+			magickExe
+		);
+		ImageManager imageManager = new ImageManager(imageCompressor);
+		
 		StatusLog.log("Initializing window");
-		final PAMainWindow pam = new PAMainWindow();
+		final PAMainWindow pam = new PAMainWindow(imageManager);
 		if( disableTouching ) pam.imageManager.touchingEnabled = false;
 		pam.imageManager.archiveDirectoryUriMap = archiveDirectoryUriMap;
 		pam.nonFullscreenUndecorated = undecorate;
