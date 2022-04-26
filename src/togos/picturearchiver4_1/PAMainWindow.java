@@ -55,7 +55,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 	private static final long serialVersionUID = 1L;
 	
 	static final String MAGICK_EXE_DEFAULT = "gm";
-	static final String VERSION = "4.1.241";
+	static final String VERSION = "4.1.242";
 
 	class ImagePanel extends DraggableScrollPane {
 		private static final long serialVersionUID = 1L;
@@ -754,7 +754,7 @@ public class PAMainWindow extends JFrame implements ResourceUpdateListener
 		"will be used, and if that is not set, we'll default to '"+MAGICK_EXE_DEFAULT+"'.\n" +
 		"\n" +
 		"This calls out to jpegtran and graphicsmagick or imagemagick.  You may want to:\n" +
-		"  choco install jpegtran magick\n" +
+		"  choco install jpegtran imagemagick\n" +
 		"or similar installation command for your platform.\n";
 	
 	public static void main(String[] args) {

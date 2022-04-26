@@ -24,9 +24,23 @@ Compression requires GraphicsMagick.
 
 ## Dependencies
 
+Java, of course.
+
 Image rotation and flipping require ~jpegtran~ to be on the system command path.
 
 Compression uses GraphicsMagick.  ~gm~ should be somewhere on the system command-path for that to work.
+
+### Easy Installation on Windows
+
+The easiest way to get them installed on Windows is to run ~util/install-tools.bat~.
+This will install Chocolatey, openjdk, jpegtran, and imagemagick.
+If Chocolatey was not already installed you may need to restart your shell or manually add its ~bin~ dir to ~%PATH%~.
+
+Otherwise, do some variation of the following:
+
+```bat
+choco install openjdk jpegtran imagemagick
+```
 
 ## TODO
 
